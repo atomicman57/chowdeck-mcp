@@ -5,12 +5,48 @@
  * Watermark: THATHMAN·CHOWDECK·MCP
  */
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
-import { session } from "./session.js";
+import { Buffer } from "node:buffer";
+import { session, persistNow } from "./session.js";
+import { createHash } from "node:crypto";
 
 const BASE = process.env.CHOWDECK_API_BASE ?? "https://api.chowdeck.com";
 const APP_VERSION = process.env.CHOWDECK_APP_VERSION ?? "2.0.0";
 const TIMEOUT_MS = Number(process.env.CHOWDECK_TIMEOUT_MS ?? 15000);
 const MAX_RETRIES = Number(process.env.CHOWDECK_MAX_RETRIES ?? 2);
+if (process.env.CHOWDECK_HTTP_ADAPTER === "fetch") {
+  axios.defaults.adapter = "fetch";
+  axios.defaults.fetchOptions = { cache: "no-store" };
+}
+
+let refreshInFlight: Promise<void> | null = null;
+
+/** Storefront-confirmed token renewal; no browser session extraction. */
+export async function refreshSessionToken(): Promise<void> {
+  if (refreshInFlight) return refreshInFlight;
+  const previous = session.token;
+  if (!previous) throw new Error("Sign in to Chowdeck before refreshing the session.");
+  refreshInFlight = (async () => {
+    try {
+      const response = await axios.post(`${BASE}/auth/refresh-token`, { token: previous }, {
+        timeout: TIMEOUT_MS,
+        headers: { "x-app-name": "storefront", "x-app-os": "web", "Authorization": `Bearer ${previous}` },
+      });
+      const token = response.data?.token ?? response.data?.data?.token;
+      if (typeof token !== "string" || !token) throw new Error("Missing refreshed token");
+      session.token = token;
+    } catch {
+      throw new Error("Chowdeck could not renew this session. Sign in again if it has been revoked; no order was automatically repeated after an ambiguous failure.");
+    }
+  })().finally(() => { refreshInFlight = null; });
+  return refreshInFlight;
+}
+function tokenNeedsRefresh(token: string): boolean {
+  try {
+    const value = token.split(".")[1];
+    const payload = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+    return typeof payload.exp === "number" && payload.exp * 1000 <= Date.now() + 60000;
+  } catch { return false; }
+}
 
 function client(): AxiosInstance {
   const headers: Record<string, string> = {
@@ -21,12 +57,27 @@ function client(): AxiosInstance {
   };
   if (session.token) headers["Authorization"] = `Bearer ${session.token}`;
   if (session.guestId) headers["x-guest-id"] = session.guestId;
-  const instance = axios.create({ baseURL: BASE, headers, timeout: TIMEOUT_MS });
+  const instance = axios.create({ baseURL: BASE, headers, timeout: TIMEOUT_MS, ...(process.env.CHOWDECK_HTTP_ADAPTER === "fetch" ? { adapter: "fetch" } : {}) });
+  instance.interceptors.request.use(async (cfg) => {
+    if (session.token && !cfg.url?.startsWith("/auth/login") && tokenNeedsRefresh(session.token)) await refreshSessionToken();
+    if (session.token) cfg.headers.set("Authorization", `Bearer ${session.token}`);
+    return cfg;
+  });
   // Retry only transient failures (network errors / 5xx) with linear backoff.
   // Never retries 4xx; order placement opts out via _noRetry to avoid dupes.
   instance.interceptors.response.use(undefined, async (error) => {
-    const cfg = error.config as (AxiosRequestConfig & { _retry?: number; _noRetry?: boolean }) | undefined;
-    if (!cfg || cfg._noRetry) throw error;
+    const cfg = error.config as (AxiosRequestConfig & { _retry?: number; _noRetry?: boolean; _authRetried?: boolean }) | undefined;
+    const authMessage = error.response?.data?.message;
+    if (cfg && session.token && !cfg._authRetried && error.response?.status === 401 && ["Token expired", "Invalid token"].includes(authMessage)) {
+      cfg._authRetried = true;
+      const rejectedToken = (cfg.headers as any)?.Authorization;
+      if (rejectedToken === `Bearer ${session.token}`) await refreshSessionToken();
+      cfg.headers = { ...cfg.headers, Authorization: `Bearer ${session.token}` };
+      // An explicit authentication rejection is safe to replay once; never
+      // replay a timeout, network error, 5xx, or ambiguous purchase outcome.
+      return instance(cfg);
+    }
+    if (!cfg || cfg._noRetry || !["get", "head", "options"].includes((cfg.method ?? "get").toLowerCase())) throw error;
     const status = error.response?.status;
     const transient = status === undefined || status >= 500;
     cfg._retry = (cfg._retry ?? 0) + 1;
@@ -180,7 +231,7 @@ export async function searchVendors(
 ) {
   if (!session.addressId) throw new Error("No address set. Call set_address first.");
   return (await client().get("/customer/search", {
-    params: { q, address_id: session.addressId, ...filters },
+    params: { text: q, address_id: session.addressId, ...filters },
   })).data;
 }
 
@@ -189,32 +240,17 @@ export async function searchVendors(
 // need adjusting. Each returns the API response (or error) verbatim.
 
 export async function listFavorites() {
-  return (await client().get("/customer/vendor/favorite")).data;
+  return (await client().get("/customer/vendor/v2", { params: { is_favourite: true, address_id: session.addressId } })).data;
 }
-
 export async function addFavorite(vendorId: number) {
-  return (await client().post(`/customer/vendor/${vendorId}/favorite`, {})).data;
+  return (await client().post(`/customer/vendor/${vendorId}/like/1`, {})).data;
 }
-
 export async function removeFavorite(vendorId: number) {
-  return (await client().delete(`/customer/vendor/${vendorId}/favorite`)).data;
+  return (await client().post(`/customer/vendor/${vendorId}/like/0`, {})).data;
 }
-
-// ── Reorder ─────────────────────────────────────────────────────────────────
-// Rebuild a cart from a past order so the user can re-place it. Composes
-// getOrder -> extract items -> createOrUpdateCart. Returns the new cart.
+// Native repeat endpoint preserves the original order's options and packs.
 export async function reorder(orderId: string) {
-  const orderRes: any = await getOrder(orderId);
-  const order = orderRes?.data ?? orderRes;
-  const vendorId = order?.vendor_id ?? order?.vendor?.id;
-  if (!vendorId) throw new Error("Could not determine the vendor from that order.");
-  const sourceItems: any[] = order?.order_items ?? order?.items ?? [];
-  const items = sourceItems
-    .filter((it) => (it?.type ?? "menu") !== "container")
-    .map((it) => ({ item_id: it.item_id ?? it.menu_id ?? it.id, quantity: it.quantity ?? 1, type: it.type ?? "menu" }))
-    .filter((it) => it.item_id);
-  if (!items.length) throw new Error("That order has no re-orderable items.");
-  return createOrUpdateCart({ vendor_id: vendorId, items });
+  return (await client().post(`/customer/order/${encodeURIComponent(orderId)}/repeat`, {})).data;
 }
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
@@ -300,7 +336,7 @@ export async function verifyOtp(phone: string, otp: string, country_code = "NG")
       await client().patch("/customer/cart/guest/upgrade").catch(() => null);
     }
   }
-  return res;
+  return { ...res, data: { ...res?.data, token: undefined, access_token: undefined } };
 }
 
 export async function getMe() {
@@ -404,23 +440,13 @@ export async function getNotifications() {
 // Best-effort: validate a promo code (optionally scoped to a vendor/cart). The
 // confirmed code can then be passed to place_order via promo_codes.
 export async function validatePromo(code: string, opts: { vendor_id?: number; cart_id?: number } = {}) {
-  return (await client().post("/customer/promo/validate", {
-    code,
-    vendor_id: opts.vendor_id,
-    cart_id: opts.cart_id,
-    address_id: session.addressId,
-  })).data;
+  return (await client().post(`/customer/promo-code/${encodeURIComponent(code)}`, { currency: "NGN" })).data;
 }
 
-// ── Wallet top-up ───────────────────────────────────────────────────────────
-// Best-effort: initialise a wallet funding transaction. Returns a Paystack
-// authorization_url the user completes to add money. Field/endpoint inferred.
+// The storefront converts entered naira to kobo before funding a wallet.
 export async function walletTopup(amount: number, channel = "card") {
-  return (await client().post("/customer/wallet/fund", {
-    amount,
-    currency: "NGN",
-    channel,
-    callback_url: "https://chowdeck.com/store",
+  return (await client().post("/customer/payment/start", {
+    amount: Math.round(amount * 100), destination: "wallet", method: channel, currency: "NGN",
   })).data;
 }
 
@@ -458,6 +484,7 @@ export async function getVendor(vendorId: number) {
 // (vendor address), vendor_id, order_class, and cart_id. We auto-resolve the
 // vendor's address_id if not supplied.
 export async function getDeliveryFee(body: {
+  address_id?: number;
   vendor_id: number;
   cart_id?: number;
   destination_id?: number;
@@ -470,7 +497,7 @@ export async function getDeliveryFee(body: {
     sourceId = v?.data?.address_id;
   }
   const payload: Record<string, unknown> = {
-    destination_id: body.destination_id ?? session.addressId,
+    destination_id: body.destination_id ?? body.address_id ?? session.addressId,
     order_class: body.order_class ?? "delivery",
     source_id: sourceId,
     vendor_id: body.vendor_id,
@@ -479,82 +506,230 @@ export async function getDeliveryFee(body: {
   return (await client().post("/customer/delivery/amount", payload)).data;
 }
 
-export async function placeOrder(body: {
+export type GiftRecipient = {
+  donor_name: string;
+  name: string;
+  phone: string;
+  country_code: string;
+  email?: string;
+  message?: string;
+  save_as_beneficiary?: boolean;
+};
+
+export type OrderInput = {
   vendor_id: number;
   cart_id: number;
-  fee_id: number;
-  payment_method: string; // "card" | "wallet" | "online_payment" | "pay_for_me"
-  payment_method_id?: number; // required for saved cards
-  online_channel?: string; // for online_payment: seeds Paystack channel (card|bank_transfer|...)
+  idempotency_key?: string;
+  allow_repeat?: boolean;
+  max_total_naira?: number;
+  expected_total_naira?: number;
+  fee_id?: number;
+  payment_method: "card" | "wallet" | "online_payment" | "pay_for_me";
+  payment_method_id?: number;
+  online_channel?: string;
   address_id?: number;
   promo_codes?: string[];
   customer_vendor_note?: string;
   customer_delivery_note?: string;
   split_payment_with_wallet?: boolean;
-  // Best-effort extras (field names inferred from the storefront; safe to omit).
-  scheduled_for?: string; // ISO 8601 — schedule the delivery instead of ASAP
-  rider_tip?: number; // tip for the rider, in NGN
-}) {
-  // Build order_items from the live cart (Chowdeck expects them explicitly).
-  const cartRes: any = await getCartByVendor(body.vendor_id);
-  const cart = cartRes?.data;
-  const orderItems = (cart?.cart_items ?? [])
-    .filter((it: any) => it.type !== "container")
-    .map((it: any) => ({ item_id: it.item_id, quantity: it.quantity, type: it.type ?? "menu", pack_id: 1 }));
+  gift_recipient?: GiftRecipient;
+  order_class?: "delivery" | "pickup" | "vendor_delivery" | "preorder_delivery";
+  delivery_date?: string;
+  earliest_delivery_time?: string;
+  latest_delivery_time?: string;
+  scheduled_for?: string;
+  rider_tip?: number;
+};
 
+/** Pure payload builder, independently testable without charging an account. */
+export function buildOrderPayload(body: OrderInput, cart: any) {
+  if (!cart?.id || Number(cart.id) !== body.cart_id) throw new Error("Cart changed: refresh checkout before ordering.");
+  if (!cart.cart_items?.length) throw new Error("Cart is empty.");
+  const orderClass = body.order_class ?? cart.class ?? "delivery";
+  if (!["delivery", "pickup", "vendor_delivery", "preorder_delivery"].includes(orderClass)) throw new Error("Unsupported order class.");
+  if (body.scheduled_for) throw new Error("Use preorder_delivery with delivery_date and the vendor's earliest/latest_delivery_time; arbitrary scheduling is unsupported.");
+  if (body.payment_method === "card" && !body.payment_method_id) throw new Error("Saved card payment requires payment_method_id.");
+  if (body.payment_method === "wallet" && body.split_payment_with_wallet) throw new Error("Wallet splitting requires a second payment method.");
+  if (orderClass === "pickup" && body.gift_recipient) throw new Error("Gift delivery is unavailable for pickup orders.");
+  if (orderClass !== "pickup" && (!body.fee_id || !(body.address_id ?? session.addressId))) throw new Error("Delivery requires a quoted fee_id and address_id.");
+  if (orderClass === "preorder_delivery" && (!body.delivery_date || !body.earliest_delivery_time || !body.latest_delivery_time)) throw new Error("Select a vendor preorder delivery date and time window.");
+  // Checkout from cart preserves the server's packs, containers and modifiers.
+  // Reconstructing all items as pack_id:1 silently merges separate meal packs.
   const payload: Record<string, unknown> = {
-    source: "web",
-    app_version: APP_VERSION,
-    vendor_id: body.vendor_id,
-    cart_id: body.cart_id,
-    fee_id: body.fee_id,
-    address_id: body.address_id ?? session.addressId,
-    class: "delivery",
-    checkout_from_cart: true,
-    requires_delivery_pin: true,
-    payment_method: body.payment_method,
-    order_items: orderItems,
-    bag_quantity: cart?.bag_quantity ?? 0,
-    promo_codes: body.promo_codes ?? [],
+    source: "web", app_version: APP_VERSION, vendor_id: body.vendor_id,
+    cart_id: body.cart_id, class: orderClass, checkout_from_cart: true,
+    requires_delivery_pin: orderClass !== "pickup", payment_method: body.payment_method,
+    bag_quantity: cart.bag_quantity ?? 0, promo_codes: body.promo_codes ?? [],
+    currency: "NGN", country_code: "NG",
+    customer_vendor_note: body.customer_vendor_note ?? cart.customer_vendor_note ?? "",
+    customer_delivery_note: body.customer_delivery_note ?? cart.customer_delivery_note ?? "",
+    gift_recipient: body.gift_recipient ? { ...body.gift_recipient, phone: normalizePhone(body.gift_recipient.phone), save_as_beneficiary: body.gift_recipient.save_as_beneficiary ?? false } : null,
+    split_payment_with_wallet: body.split_payment_with_wallet ?? false,
   };
   if (body.payment_method === "pay_for_me") payload.has_external_payment = true;
-  else if (body.payment_method_id) payload.payment_method_id = body.payment_method_id;
-  if (body.customer_vendor_note) payload.customer_vendor_note = body.customer_vendor_note;
-  if (body.customer_delivery_note) payload.customer_delivery_note = body.customer_delivery_note;
-  if (body.split_payment_with_wallet) payload.split_payment_with_wallet = true;
-  if (body.scheduled_for) {
-    payload.scheduled_for = body.scheduled_for;
-    payload.class = "scheduled"; // best-effort: scheduled orders use a distinct class
+  if (body.payment_method === "card") payload.payment_method_id = body.payment_method_id;
+  if (orderClass !== "pickup") Object.assign(payload, { fee_id: body.fee_id, address_id: body.address_id ?? session.addressId });
+  if (orderClass === "preorder_delivery") Object.assign(payload, { delivery_date: body.delivery_date, earliest_delivery_time: body.earliest_delivery_time, latest_delivery_time: body.latest_delivery_time });
+  if (body.rider_tip) payload.tip = Math.round(body.rider_tip * 100);
+  return payload;
+}
+
+function stableStringify(value: any): string {
+  const normalize = (v: any): any => Array.isArray(v) ? v.map(normalize) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map(k => [k, normalize(v[k])])) : v;
+  return JSON.stringify(normalize(value));
+}
+function orderFingerprint(body: OrderInput, cart: any) {
+  const items = (cart.cart_items ?? []).map((item: any) => ({ id: item.item_id, quantity: item.quantity, type: item.type, pack: item.pack_reference, group: item.menu_group_id })).sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  return createHash("sha256").update(JSON.stringify({ vendor: body.vendor_id, items, address: body.address_id ?? session.addressId, recipient: body.gift_recipient ? normalizePhone(body.gift_recipient.phone) : null })).digest("hex");
+}
+function saveAttempt(key: string, attempt: any) {
+  const attempts = { ...(session.data?.orderAttempts ?? {}), [key]: attempt };
+  const entries = Object.entries(attempts).sort((a: any, b: any) => b[1].at - a[1].at).slice(0, 100);
+  session.data = { ...session.data, orderAttempts: Object.fromEntries(entries) };
+}
+export async function placeOrder(body: OrderInput) {
+  const requestedAt = Date.now();
+  if (!session.token) throw new Error("Sign in to Chowdeck before ordering.");
+  const requestSignature = createHash("sha256").update(stableStringify({ ...body, allow_repeat: undefined })).digest("hex");
+  const existingRequest = body.idempotency_key ? session.data?.orderAttempts?.[body.idempotency_key] : null;
+  if (existingRequest && existingRequest.status !== "rejected") {
+    if (existingRequest.request_signature && existingRequest.request_signature !== requestSignature) throw new Error("Idempotency key was already used for a different order.");
+    if (existingRequest.status === "completed") return { ...existingRequest.result, idempotent_replay: true };
+    let active = null; try { active = await getActiveOrders(); } catch {}
+    return { status: "unknown", idempotency_key: body.idempotency_key, matching_active_orders: active, message: "A previous placement may have succeeded. Do not place another order; reconcile the existing attempt first." };
   }
-  if (typeof body.rider_tip === "number" && body.rider_tip > 0) payload.rider_tip = body.rider_tip;
-
-  const res: any = (await client().post("/customer/order", payload, { _noRetry: true } as any)).data;
-
-  // For online payment, immediately fetch the Paystack checkout link so the
-  // order isn't abandoned. The hosted page lets the user pick card/transfer/etc;
-  // online_channel just seeds it. If that path fails, fall back to startPayment
-  // (v2), a different Paystack integration, so the order still gets a link.
-  if (body.payment_method === "online_payment" && res?.data?.id) {
+  if (body.max_total_naira !== undefined || body.expected_total_naira !== undefined) {
+    const preview = await prepareCheckout(body.vendor_id, body.address_id, { promo_codes: body.promo_codes, rider_tip: body.rider_tip, max_total_naira: body.max_total_naira, payment_method: body.payment_method });
+    if (!preview.summary.ready) throw new Error(`Checkout blocked: ${JSON.stringify(preview.summary.issues)}`);
+    if (body.expected_total_naira !== undefined && preview.summary.total_kobo !== Math.round(body.expected_total_naira * 100)) throw new Error("The live total changed. Show the new preview and obtain approval again.");
+    if (preview.delivery_fee?.data?.id) body = { ...body, fee_id: preview.delivery_fee.data.id };
+  }
+  const cart = (await getCartByVendor(body.vendor_id))?.data;
+  const payload = buildOrderPayload(body, cart);
+  const fingerprint = orderFingerprint(body, cart);
+  const key = body.idempotency_key ?? `cart-${body.cart_id}-${fingerprint}`;
+  const previous = session.data?.orderAttempts?.[key];
+  if (previous && previous.status !== "rejected") {
+    if (previous.fingerprint !== fingerprint) throw new Error("Idempotency key was already used for a different order.");
+    if (previous.status === "completed") return { ...previous.result, idempotent_replay: true };
+    let active = null; try { active = await getActiveOrders(); } catch {}
+    return { status: "unknown", idempotency_key: key, matching_active_orders: active, message: "A previous placement may have succeeded. Do not place another order; reconcile the existing attempt first." };
+  }
+  const duplicate: any = Object.values(session.data?.orderAttempts ?? {}).find((a: any) => a.fingerprint === fingerprint && Date.now() - a.at < 600000 && a.status !== "rejected");
+  if (duplicate && !body.allow_repeat) return { duplicate_order_blocked: true, previous_order_id: duplicate.result?.data?.id, message: "A matching order was attempted within ten minutes. Inspect it before a new order. allow_repeat requires fresh explicit approval for an intentional second order." };
+  const attempt = { at: requestedAt, fingerprint, request_signature: requestSignature, status: "pending", cart_id: body.cart_id, vendor_id: body.vendor_id };
+  saveAttempt(key, attempt);
+  await persistNow(); // Durable reservation BEFORE the charge, including on hosted restarts.
+  let result: any;
+  try {
+    result = (await client().post("/customer/order", payload)).data;
+  } catch (error: any) {
+    const status = error.response?.status;
+    saveAttempt(key, { ...attempt, status: status && status >= 400 && status < 500 && status !== 408 ? "rejected" : "unknown" });
+    await persistNow();
+    if (!status || status >= 500 || status === 408) {
+      let active = null; try { active = await getActiveOrders(); } catch {}
+      return { status: "unknown", idempotency_key: key, matching_active_orders: active, message: "Order placement outcome is unknown. No retry was made. Check active orders/history before any further placement." };
+    }
+    throw error;
+  }
+  if (body.payment_method === "online_payment" && result?.data?.id) {
     try {
-      const pay: any = await startOrderPayment(res.data.id, body.online_channel ?? "card");
-      res.data.payment = pay?.data ?? pay;
-    } catch (err: any) {
-      try {
-        const fallback: any = await startPayment({ order_id: res.data.id, method: body.online_channel ?? "card" });
-        res.data.payment = fallback?.data ?? fallback;
-        res.data._payment_fallback = "startPayment_v2";
-      } catch {
-        res.data.payment_error = err?.response?.data ?? err?.message ?? String(err);
-      }
+      const payment = await startPayment({ order_id: result.data.id, method: body.online_channel ?? "card", split_payment_with_wallet: body.split_payment_with_wallet });
+      result.data.payment = payment?.data ?? payment;
+    } catch {
+      result.data.payment_error = "Order created; payment initialization failed. Check get_order_payment_status before retrying payment. Do not place another order.";
     }
   }
-  return res;
+  saveAttempt(key, { ...attempt, status: result?.data?.id ? "completed" : "unknown", result });
+  const orderLog = [...(session.data?.orderLog ?? []), { order_id: result?.data?.id, requested_at: new Date(attempt.at).toISOString(), placed_at: new Date().toISOString(), seconds_to_place: (Date.now() - attempt.at) / 1000, vendor_id: body.vendor_id, recipient: body.gift_recipient?.name ?? "self", payment_method: body.payment_method, total: result?.data?.total ?? result?.data?.amount, total_naira: body.expected_total_naira ?? (typeof result?.data?.total === "number" ? result.data.total / 100 : undefined), delivery_pin: result?.data?.delivery_pin ?? result?.data?.pin, idempotency_key: key }].slice(-100);
+  session.data = { ...session.data, orderLog };
+  await persistNow();
+  return result;
+}
+
+// Endpoints observed in the public Chowdeck storefront on 2026-10-26.
+export async function listBeneficiaries() {
+  return (await client().get("/customer/beneficiary")).data;
+}
+export async function getOrderTimeline(orderId: string) {
+  return (await client().get(`/customer/order/${encodeURIComponent(orderId)}/timeline`)).data;
+}
+export async function getLiveTracking(orderId: string) {
+  return (await client().get(`/customer/order/${encodeURIComponent(orderId)}/live-tracking`)).data;
+}
+export async function updateDeliveryNote(orderId: string, note: string) {
+  return (await client().put(`/customer/order/${encodeURIComponent(orderId)}/delivery`, { customer_delivery_note: note })).data;
+}
+export async function duplicatePack(cartId: number, packRef: string) {
+  return (await client().post(`/customer/cart/${cartId}/pack/${encodeURIComponent(packRef)}/duplicate`)).data;
+}
+export async function deletePack(cartId: number, packRef: string) {
+  return (await client().delete(`/customer/cart/${cartId}/pack/${encodeURIComponent(packRef)}`)).data;
+}
+
+export type CheckoutOptions = { promo_codes?: string[]; rider_tip?: number; max_total_naira?: number; payment_method?: string };
+
+export function checkoutItems(cart: any) {
+  const packs = new Map<string, number>();
+  const items: any[] = [], containers: any[] = [];
+  for (const item of cart.cart_items ?? []) {
+    const reference = String(item.pack_reference ?? "default");
+    if (!packs.has(reference)) packs.set(reference, packs.size + 1);
+    const pack_id = packs.get(reference);
+    if (item.type === "container") containers.push({ id: item.item_id, quantity: item.quantity, name: item.name, price: item.price_per_quantity, type: "container", pack_id });
+    else items.push({ item_id: item.item_id, quantity: item.quantity, type: item.type ?? "menu", pack_id, pack_unique_id: reference, ...(item.menu_group_id ? { group_id: item.menu_group_id } : {}) });
+  }
+  return { items, containers };
+}
+export async function getVirtualAccount() {
+  return (await client().get("/auth/virtual-account", { params: { currency: "NGN" } })).data;
+}
+export function summarizeCheckout(cart: any, vendor: any, wallet: any, fee: any, config: any, discounts: any[], opts: CheckoutOptions = {}) {
+  const issues: any[] = [];
+  const entries = cart.cart_items ?? [];
+  const finite = (n: any) => typeof n === "number" && Number.isFinite(n);
+  if (!entries.length) issues.push({ code: "empty_cart" });
+  if (vendor.is_open === false && cart.class !== "preorder_delivery") issues.push({ code: "vendor_closed" });
+  if (cart.is_valid === false) issues.push({ code: "cart_invalid", items: cart.validation_result ?? [] });
+  const out = entries.filter((item: any) => item.in_stock === false || item.is_available === false);
+  if (out.length) issues.push({ code: "out_of_stock", items: out.map((item: any) => ({ id: item.item_id, name: item.name })) });
+  const priced = entries.length > 0 && entries.every((item: any) => finite(item.price_per_quantity) && finite(item.quantity));
+  const subtotal = priced ? entries.reduce((sum: number, item: any) => sum + item.price_per_quantity * item.quantity, 0) : cart.total_price;
+  const bagQuantity = Number(cart.bag_quantity ?? 0);
+  const bagPrice = config.bag_information?.amount;
+  const complete = finite(subtotal) && (bagQuantity === 0 || finite(bagPrice)) && (cart.class === "pickup" || (finite(fee?.final_delivery_amount) && finite(fee?.final_service_amount)));
+  const discount = discounts.reduce((sum, item) => sum + Number(item.amount_off ?? 0) + Number(item.bogof_amount_off ?? 0), 0);
+  const bogof = discounts.filter(item => item.target === "bogof").reduce((sum, item) => sum + Number(item.bogof_amount_off ?? 0), 0);
+  const total = complete ? Math.max(0, Math.round(subtotal + bogof + Number(fee?.final_delivery_amount ?? 0) + Number(fee?.final_service_amount ?? 0) + bagQuantity * Number(bagPrice ?? 0) - discount + Math.round((opts.rider_tip ?? 0) * 100))) : null;
+  if (!complete) issues.push({ code: "quote_incomplete", message: "Missing price/fee/bag fields: do not place until a full live total is available." });
+  const minimum = vendor.minimum_order_amount;
+  if (finite(minimum) && finite(subtotal) && subtotal < minimum) issues.push({ code: "below_minimum_order", minimum_naira: minimum / 100, shortfall_naira: (minimum - subtotal) / 100 });
+  const balance = wallet.total_balance;
+  const shortfall = total !== null && finite(balance) ? Math.max(0, total - balance) : null;
+  if ((opts.payment_method ?? "wallet") === "wallet" && shortfall !== null && shortfall > 0) issues.push({ code: "wallet_shortfall", shortfall_naira: shortfall / 100 });
+  if (total !== null && opts.max_total_naira !== undefined && total > Math.round(opts.max_total_naira * 100)) issues.push({ code: "over_budget", max_total_naira: opts.max_total_naira, total_naira: total / 100 });
+  return { complete, total_kobo: total, total_naira: total === null ? null : total / 100, subtotal_naira: finite(subtotal) ? subtotal / 100 : null, delivery_naira: Number(fee?.final_delivery_amount ?? 0) / 100, service_naira: Number(fee?.final_service_amount ?? 0) / 100, bags_naira: bagQuantity * Number(bagPrice ?? 0) / 100, discount_naira: discount / 100, wallet_balance_naira: finite(balance) ? balance / 100 : null, shortfall_naira: shortfall === null ? null : shortfall / 100, issues, ready: complete && issues.length === 0 };
+}
+/** One round trip from the agent; independent API reads execute together. */
+export async function prepareCheckout(vendorId: number, addressId?: number, opts: CheckoutOptions = {}) {
+  const [cart, vendor, wallet, methods, beneficiaries, config] = await Promise.all([
+    getCartByVendor(vendorId), getVendor(vendorId), getWallet(), getPaymentMethods(), listBeneficiaries(), getConfig(),
+  ]);
+  if (!cart?.data?.id) throw new Error("Build a cart before preparing checkout.");
+  const fee = cart.data.class === "pickup" ? null : await getDeliveryFee({ vendor_id: vendorId, cart_id: Number(cart.data.id), address_id: addressId, source_id: vendor?.data?.address_id, order_class: cart.data.class });
+  const { items, containers } = checkoutItems(cart.data);
+  const applied: any = (await client().post("/customer/discount/apply", { promo_codes: opts.promo_codes ?? [], vendor_id: vendorId, address_id: addressId ?? session.addressId, fee_id: fee?.data?.id ?? 0, cart_id: cart.data.id, currency: "NGN", order_items: items, containers, delivery_fee: fee?.data?.final_delivery_amount ?? 0, order_class: cart.data.class === "vendor_delivery" ? "delivery" : cart.data.class ?? "delivery" })).data;
+  if (!Array.isArray(applied?.data)) throw new Error("Could not obtain a complete discount quote; do not place this order.");
+  const summary = summarizeCheckout(cart.data, vendor?.data ?? {}, wallet?.data ?? {}, fee?.data, config?.data ?? {}, applied.data, opts);
+  return { monetary_units: "Raw Chowdeck monetary values are kobo (100 kobo = 1 NGN). Fields ending _naira are NGN.", summary, cart, vendor, wallet, payment_methods: methods, beneficiaries, delivery_fee: fee, discounts: applied.data, address_id: addressId ?? session.addressId, needs_confirmation: true, message: "Review the live total, items, address, recipient and payment method before placement. This call did not place an order." };
 }
 
 export async function startPayment(body: {
   order_id: number;
   method: string;
   pocket_tag?: string;
+  split_payment_with_wallet?: boolean;
   return_url?: string;
 }) {
   return (await client().post("/customer/payment/start/v2", body)).data;

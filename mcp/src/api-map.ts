@@ -1,0 +1,1247 @@
+export const API_MAP = {
+  "api_base": "https://api.chowdeck.com",
+  "inspected_on": "2026-10-26",
+  "source_asset": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js",
+  "asset_sha256": "4d0441f975aeecbb72709e282ed6069c078e18cc1ebc4ded8576a4fe83723b0e",
+  "scope": "Public storefront contracts. An observed path is not proof of successful authenticated execution. Uncaptured schemas and unverified methods are marked.",
+  "money": "API amounts use kobo; NGN-facing MCP inputs explicitly convert where documented.",
+  "operations": [
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/phone/validate",
+      "fields": [
+        "phone",
+        "country_code"
+      ],
+      "mcp_tool": "login_send_otp",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "fields": [
+        "phone",
+        "country_code",
+        "role"
+      ],
+      "mcp_tool": "login_send_otp",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/login/validate-otp",
+      "fields": [
+        "phone",
+        "country_code",
+        "role",
+        "otp"
+      ],
+      "mcp_tool": "login_verify_otp",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/refresh-token",
+      "fields": [
+        "token"
+      ],
+      "mcp_tool": "automatic renewal",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "Refresh-token body uses the existing MCP-owned token; never extract browser tokens.",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/resend-otp",
+      "fields": [
+        "phone",
+        "role",
+        "country_code",
+        "type"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "GET",
+      "path": "/auth/me",
+      "fields": [
+        "currency",
+        "country_code"
+      ],
+      "mcp_tool": "get_me",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "GET",
+      "path": "/auth/countries",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/customer/register",
+      "fields": [
+        "request body requires further field capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/customer/register/validate-otp",
+      "fields": [
+        "request body requires further field capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/customer/recovery/email",
+      "fields": [
+        "recovery fields require further capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/customer/recovery/phone",
+      "fields": [
+        "recovery fields require further capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "PUT",
+      "path": "/auth/profile?user_role=customer",
+      "fields": [
+        "profile fields"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Authentication",
+      "method": "GET",
+      "path": "/auth/refresh-push-token",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Addresses",
+      "method": "GET",
+      "path": "/place/autocomplete/json",
+      "fields": [
+        "input"
+      ],
+      "mcp_tool": "search_places",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Addresses",
+      "method": "GET",
+      "path": "/place/details/json",
+      "fields": [
+        "placeid"
+      ],
+      "mcp_tool": "place_details",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Addresses",
+      "method": "GET",
+      "path": "/customer/address",
+      "fields": [],
+      "mcp_tool": "list_addresses",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Addresses",
+      "method": "POST",
+      "path": "/customer/address",
+      "fields": [
+        "resolved address fields"
+      ],
+      "mcp_tool": "set_address",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Addresses",
+      "method": "PUT",
+      "path": "/customer/address",
+      "fields": [
+        "saved address fields"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Addresses",
+      "method": "DELETE",
+      "path": "/customer/address/{id}",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Addresses",
+      "method": "POST",
+      "path": "/customer/address/set-active",
+      "fields": [
+        "address_id"
+      ],
+      "mcp_tool": "set_active_address",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/config",
+      "fields": [
+        "currency"
+      ],
+      "mcp_tool": "get_config",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor",
+      "fields": [
+        "custom_tags",
+        "address_id"
+      ],
+      "mcp_tool": "featured_vendors",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/v2",
+      "fields": [
+        "address_id",
+        "is_favourite",
+        "vendor_type",
+        "filters"
+      ],
+      "mcp_tool": "list_vendors",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}",
+      "fields": [
+        "address_id"
+      ],
+      "mcp_tool": "get_vendor",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/search",
+      "fields": [
+        "text",
+        "address_id"
+      ],
+      "mcp_tool": "search",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/search/product",
+      "fields": [
+        "query fields need further capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/menu",
+      "fields": [
+        "return_out_of_stock",
+        "menu_category_id"
+      ],
+      "mcp_tool": "get_menu",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/menu-category",
+      "fields": [],
+      "mcp_tool": "get_menu_categories",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/menu-category/summary",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/menu/{item_id}",
+      "fields": [],
+      "mcp_tool": "get_menu_item",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/menu/search",
+      "fields": [
+        "query params need further capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/menu-category/{category_id}/menu",
+      "fields": [
+        "query params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/menu/sections",
+      "fields": [
+        "sections",
+        "type"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/menu/{id}",
+      "fields": [
+        "query params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/rating",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/{id}/review",
+      "fields": [
+        "pagination params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/nearby",
+      "fields": [
+        "address/filter params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/frequent",
+      "fields": [
+        "address/filter params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/chowstore/products",
+      "fields": [
+        "product filters"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/chowsmart/menu",
+      "fields": [
+        "address_id"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/preorder-event/{vendor_type}/vendor",
+      "fields": [
+        "campaign/address params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/preorder-event/{vendor_type}/menu",
+      "fields": [
+        "campaign/address params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/home/tiles",
+      "fields": [
+        "query params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Discovery",
+      "method": "GET",
+      "path": "/customer/vendor/campaign",
+      "fields": [
+        "campaign params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Favourites",
+      "method": "POST",
+      "path": "/customer/vendor/{id}/like/{0|1}",
+      "fields": [
+        "empty body"
+      ],
+      "mcp_tool": "add_favorite / remove_favorite",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "1 adds, 0 removes; favourites list is vendor/v2?is_favourite=true.",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "GET",
+      "path": "/customer/cart",
+      "fields": [],
+      "mcp_tool": "get_carts",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "GET",
+      "path": "/customer/cart/vendor/{vendor_id}",
+      "fields": [],
+      "mcp_tool": "get_cart",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "POST",
+      "path": "/customer/cart",
+      "fields": [
+        "source",
+        "app_version",
+        "vendor_id",
+        "items",
+        "class",
+        "address_id"
+      ],
+      "mcp_tool": "update_cart",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "POST",
+      "path": "/customer/cart/vendor/{vendor_id}",
+      "fields": [
+        "source",
+        "app_version",
+        "items",
+        "class",
+        "address_id"
+      ],
+      "mcp_tool": "update_cart",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "PATCH",
+      "path": "/customer/cart/guest/upgrade",
+      "fields": [],
+      "mcp_tool": "automatic guest upgrade",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "DELETE",
+      "path": "/customer/cart/clear",
+      "fields": [],
+      "mcp_tool": "clear_carts",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "DELETE",
+      "path": "/customer/cart/{id}",
+      "fields": [],
+      "mcp_tool": "delete_cart",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "POST",
+      "path": "/customer/cart/{id}/pack/{reference}/duplicate",
+      "fields": [],
+      "mcp_tool": "duplicate_pack",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Cart and packs",
+      "method": "DELETE",
+      "path": "/customer/cart/{id}/pack/{reference}",
+      "fields": [],
+      "mcp_tool": "delete_pack",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Gifts",
+      "method": "GET",
+      "path": "/customer/beneficiary",
+      "fields": [],
+      "mcp_tool": "list_beneficiaries",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "Gift fields are an order payload, not a separate gift-order endpoint. Ordinary order uses gift_recipient:null; pickup has no gift delivery.",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Gifts",
+      "method": "DELETE",
+      "path": "/customer/beneficiary/{id}",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "Gift fields are an order payload, not a separate gift-order endpoint. Ordinary order uses gift_recipient:null; pickup has no gift delivery.",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Gifts",
+      "method": "POST",
+      "path": "/customer/order",
+      "fields": [
+        "gift_recipient: donor_name/name/phone/country_code/email/message/save_as_beneficiary"
+      ],
+      "mcp_tool": "place_order",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "Gift fields are an order payload, not a separate gift-order endpoint. Ordinary order uses gift_recipient:null; pickup has no gift delivery.",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Checkout and promotions",
+      "method": "POST",
+      "path": "/customer/delivery/amount",
+      "fields": [
+        "destination_id",
+        "source_id",
+        "vendor_id",
+        "order_class",
+        "cart_id",
+        "currency",
+        "country_code"
+      ],
+      "mcp_tool": "get_delivery_fee",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Checkout and promotions",
+      "method": "POST",
+      "path": "/customer/discount/apply",
+      "fields": [
+        "promo_codes",
+        "vendor_id",
+        "address_id",
+        "fee_id",
+        "cart_id",
+        "currency",
+        "order_items",
+        "containers",
+        "delivery_fee",
+        "order_class"
+      ],
+      "mcp_tool": "prepare_checkout",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Checkout and promotions",
+      "method": "GET",
+      "path": "/customer/promo-code",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Checkout and promotions",
+      "method": "POST",
+      "path": "/customer/promo-code/{code}",
+      "fields": [
+        "currency",
+        "security_answer (if required)"
+      ],
+      "mcp_tool": "validate_promo",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Checkout and promotions",
+      "method": "GET",
+      "path": "/customer/promo-code/{code}/security-question",
+      "fields": [
+        "currency"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Checkout and promotions",
+      "method": "GET",
+      "path": "/customer/discount",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "POST",
+      "path": "/customer/order",
+      "fields": [
+        "source",
+        "vendor_id",
+        "cart_id",
+        "class",
+        "payment_method",
+        "payment_method_id",
+        "checkout_from_cart",
+        "notes",
+        "fee_id",
+        "address_id",
+        "bag_quantity",
+        "promo_codes",
+        "requires_delivery_pin",
+        "gift_recipient",
+        "split_payment_with_wallet",
+        "tip",
+        "currency",
+        "country_code"
+      ],
+      "mcp_tool": "place_order",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "GET",
+      "path": "/customer/order",
+      "fields": [
+        "status; x-chowdeck-api-version:v2"
+      ],
+      "mcp_tool": "get_active_orders / get_order_history",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "GET",
+      "path": "/customer/order/{id}",
+      "fields": [],
+      "mcp_tool": "get_order",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "GET",
+      "path": "/customer/order/{id}/timeline",
+      "fields": [],
+      "mcp_tool": "get_order_timeline",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "GET",
+      "path": "/customer/order/{id}/live-tracking",
+      "fields": [],
+      "mcp_tool": "get_live_tracking",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "POST",
+      "path": "/customer/order/{id}/cancel",
+      "fields": [],
+      "mcp_tool": "cancel_order",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "POST",
+      "path": "/customer/order/{id}/repeat",
+      "fields": [
+        "attribution (optional)"
+      ],
+      "mcp_tool": "reorder",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "PUT",
+      "path": "/customer/order/{id}/delivery",
+      "fields": [
+        "customer_delivery_note OR fee_id/payment_method/payment_method_id"
+      ],
+      "mcp_tool": "update_delivery_note",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "GET",
+      "path": "/customer/order/{id}/delivery",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "PUT",
+      "path": "/customer/order/{id}/complete",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "PUT",
+      "path": "/customer/order/{id}/rate-or-review",
+      "fields": [
+        "review payload needs further capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "POST",
+      "path": "/customer/order/{id}/tip",
+      "fields": [
+        "amount in kobo",
+        "payment_method"
+      ],
+      "mcp_tool": "tip_rider",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Orders",
+      "method": "GET",
+      "path": "/customer/order/{id}/bundle/vendors",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "GET",
+      "path": "/customer/wallet",
+      "fields": [
+        "currency",
+        "new_response=true"
+      ],
+      "mcp_tool": "get_wallet",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "GET",
+      "path": "/customer/payment/methods",
+      "fields": [
+        "currency"
+      ],
+      "mcp_tool": "get_payment_methods",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "GET",
+      "path": "/customer/payment/channel",
+      "fields": [
+        "country_identifier"
+      ],
+      "mcp_tool": "get_payment_channels",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "POST",
+      "path": "/customer/payment/start",
+      "fields": [
+        "amount in kobo",
+        "destination:wallet",
+        "method",
+        "currency"
+      ],
+      "mcp_tool": "wallet_topup",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "POST",
+      "path": "/customer/payment/charge",
+      "fields": [
+        "amount in kobo",
+        "auth_id",
+        "destination:wallet",
+        "currency"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "POST",
+      "path": "/customer/payment/start/v2",
+      "fields": [
+        "order_id",
+        "method",
+        "split_payment_with_wallet",
+        "return_url",
+        "callback_url"
+      ],
+      "mcp_tool": "start_order_payment",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "GET",
+      "path": "/customer/payment/verify/{transaction_id}",
+      "fields": [],
+      "mcp_tool": "verify_payment",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "GET",
+      "path": "/order/{id}/payment",
+      "fields": [],
+      "mcp_tool": "get_order_payment_status",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "POST",
+      "path": "/order/{id}/payment",
+      "fields": [
+        "method",
+        "pocket_tag",
+        "payment_phone"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "GET",
+      "path": "/payment/channel",
+      "fields": [
+        "country_identifier"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Payments and wallet",
+      "method": "GET",
+      "path": "/auth/virtual-account",
+      "fields": [
+        "currency"
+      ],
+      "mcp_tool": "wallet shortfall details",
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Other storefront capabilities",
+      "method": "POST",
+      "path": "/customer/package/delivery/amount",
+      "fields": [
+        "package quote payload needs capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Other storefront capabilities",
+      "method": "POST",
+      "path": "/customer/package/delivery",
+      "fields": [
+        "package delivery payload needs capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Other storefront capabilities",
+      "method": "GET",
+      "path": "/customer/chowpass/free-trial-eligibility",
+      "fields": [],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Other storefront capabilities",
+      "method": "POST",
+      "path": "/customer/preferences",
+      "fields": [
+        "preference payload"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Other storefront capabilities",
+      "method": "PUT",
+      "path": "/customer/segment/{id}",
+      "fields": [
+        "is_active"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Other storefront capabilities",
+      "method": "GET",
+      "path": "/customer/promotion/anniversary/rewards",
+      "fields": [
+        "query params"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    },
+    {
+      "category": "Other storefront capabilities",
+      "method": "POST",
+      "path": "/customer/menu/stock/notification-request",
+      "fields": [
+        "stock notification payload needs capture"
+      ],
+      "mcp_tool": null,
+      "evidence": "observed_public_storefront",
+      "live_account_verified": false,
+      "note": "",
+      "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
+    }
+  ]
+} as const;

@@ -26,3 +26,9 @@ Thumbs.db
 # Copied in at pack time (see prepack)
 mcp/README.md
 mcp/LICENSE
+
+# Generated Worker bundle and deployment state
+mcp/hosting/worker.bundle.mjs
+.wrangler/
+.dev.vars
+.dev.vars.*

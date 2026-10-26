@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0-rc.1] — 2026-10-26
+
+### Added
+- Gift recipients, saved recipient profiles, repeat-gift previews, wallet selection and splitting, exact checkout previews and shortfall reporting.
+- Durable placement idempotency, duplicate protection, order timing logs and refund snapshots.
+- Real menu images as MCP image content, an evidence-backed map of 94 observed storefront operations, and automatic session renewal.
+- Optional Cloudflare Worker hosting with encrypted persistent account state, OAuth/PKCE and owner-protected browser sign-in; authenticated loopback HTTP and stdio bridge alternatives.
+- 27 tests covering synthetic checkout, renewal, encryption, OAuth and image handling. Live account-specific payment and delivery remain unverified.
+
+### Fixed
+- Favourites routes, native reorder pack preservation, wallet-funding units and endpoint, tip conversion and vendor preorder windows.
+
 ## [Unreleased]
 
 ### In progress

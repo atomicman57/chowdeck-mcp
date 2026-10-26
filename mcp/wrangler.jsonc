@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chowdeck-mcp",
+  "main": "hosting/worker.bundle.mjs",
+  "compatibility_date": "2026-10-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "build": { "command": "npm run build:hosted" },
+  "durable_objects": {
+    "bindings": [{ "name": "CHOWDECK_ACCOUNT", "class_name": "ChowdeckAccount" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChowdeckAccount"] }]
+}

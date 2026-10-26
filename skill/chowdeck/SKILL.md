@@ -16,15 +16,15 @@ Tell the user at the start what setup requires:
 
 ## First-time setup (run once)
 
-**Always call `get_setup_status` first.** It tells you everything: `authenticated`, `address_id`, `payment_pref`, `setup_complete`, and (once logged in) `user_type` = `new` | `returning` plus `address_count`, `saved_payment_count`, `wallet`, `order_count`, and a `next` hint. If `setup_complete` is `true`, skip setup — state persists across restarts on disk (`~/.chowdeck-mcp/session.json`).
+**Always call `get_setup_status` first.** It tells you everything: `authenticated`, `address_id`, `payment_pref`, `setup_complete`, and (once logged in) `user_type` = `new` | `returning` plus `address_count`, `saved_payment_count`, `wallet`, `order_count`, and a `next` hint. If `setup_complete` is `true`, skip setup — state persists in the configured session backend.
 
 Setup flow: log in, then branch on whether the account is new or returning. Collect details conversationally — never invent a phone number, OTP, address, or coordinates.
 
 ### 1. Login (phone + OTP)
 
 1. Ask the user for their Nigerian phone number.
-2. Call `login_send_otp` with the phone. Tell the user an OTP was sent via SMS/WhatsApp.
-3. Ask the user to paste the OTP code they received.
+2. Obtain approval to send a code, then call `login_send_otp` with `confirm:true` and the phone. Tell the user an OTP was sent via SMS/WhatsApp.
+3. Prefer the owner-protected hosted `/setup` form for entering the OTP directly. Keep OTPs out of chat when that form is available.
 4. Call `login_verify_otp` with the phone and OTP. On success the bearer token is saved automatically.
    - If it fails (wrong/expired code), tell the user and offer to resend via `login_send_otp`.
 
@@ -96,3 +96,11 @@ Before `place_order`, always:
 cd mcp && npm install && npm run build
 claude mcp add chowdeck -- node <abs-path>/mcp/dist/index.js
 ```
+
+
+## Hosted and checkout additions (0.7.0-rc.1)
+
+Prefer `prepare_checkout` for a single live review of cart, fees, wallet, methods and saved gift recipients. Use `gift_recipient` for actual gifts, never substitute a rider note for gift metadata. Confirm the intended recipient and address each time. Save `payment_method: wallet` using `set_payment_pref` only when requested; a preference is not purchase approval. `split_payment_with_wallet` requires a separate card/online method. Pickup and vendor preorders must be supported by that vendor; arbitrary `scheduled_for` is rejected. `place_order` preserves server-side packs. `get_order_payment_status` and active/history checks precede any ambiguous retry. Live payment is unverified for this build; obtain approval for a specific real order before testing money movement. Preserve existing user favourites and ordering instructions.
+
+
+Use `session_status` to check and renew a saved login without sending an OTP. Use `get_food_images` to return real menu photos as native image content and source links; never substitute generated images for menu photos. `place_order` requires a stable idempotency key and explicit approval; include the live approved total and budget. For hosted sessions, deploy your own single-account server and authorize each trusted client. Never extract existing browser tokens.

@@ -1,172 +1,42 @@
-# 🍲 Chowdeck MCP
+# Chowdeck MCP
 
-> A [Model Context Protocol](https://modelcontextprotocol.io) server that lets an
-> AI agent order food and groceries on **[Chowdeck](https://chowdeck.com)**
-> (Nigeria) — discover vendors, get meal suggestions, build a cart, place an
-> order, and track delivery.
+An unofficial, MIT-licensed MCP server for discovering food, preparing orders and tracking deliveries on Chowdeck in Nigeria. This fork extends [thathman/chowdeck-mcp](https://github.com/thathman/chowdeck-mcp); original author and copyright notices are preserved. It is not affiliated with Chowdeck or Paystack.
 
-[![CI](https://github.com/thathman/chowdeck-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/thathman/chowdeck-mcp/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa.svg)](https://github.com/sponsors/thathman)
+## Features
 
-Built and maintained by **[Hendrix Nwaokolo (@thathman)](https://github.com/thathman)**.
+**68 tools and four prompts**, including:
 
----
+- Gift-recipient metadata, saved recipient profiles and defaults, rider notes and favourite recipes.
+- `reorder_gift`: prepare a repeat gift with original options/packs, recipient, address, wallet preference, spending cap and current-price comparison. Returns a preview, never a purchase.
+- `prepare_checkout`: parallel cart/account/vendor checks, live delivery/service/bag fees, discount quote, wallet shortfall and vendor/stock/minimum/budget checks. Incomplete fee data blocks a complete quote.
+- `place_order`: required stable idempotency key, persistent attempt reservation before charging, cached successful results, ten-minute duplicate detection and explicit unknown outcomes. Supply `expected_total_naira` and `max_total_naira` to enforce the approved live quote and budget.
+- Wallet payment and splitting, saved cards, native repeat orders, preserved packs, pickup and vendor preorder windows.
+- `session_status`: saved-login validation and automatic renewal when Chowdeck permits, with no automatic OTP. A revoked login can still require a fresh sign-in.
+- Exact nested item/option candidates, nearby vendor alternatives, timing logs and one-time cancellation/refund evidence. A wallet increase alone is not proof of a refund.
+- `get_food_images`: actual menu photos as native MCP image content plus labelled source links. Public CDN allowlist, HTTPS, response-size/type limits, safe redirects and no account authorization headers.
+- `get_api_map`: **94 observed storefront operations**, request fields and explicit gaps. [API map](API-MAP.md) · [Source evidence](STOREFRONT-EVIDENCE.md).
 
-## ⚠️ Project status
+Some auxiliary flows are mapped without dedicated tools or complete captured schemas. This is a development release; synthetic tests and successful public config/photo reads do not establish real wallet charges, gift delivery, refund completion or an ordering-speed guarantee.
 
-| Capability | Status |
-| --- | --- |
-| Browse vendors, menus, search, suggestions | ✅ Working |
-| Guest & authenticated carts | ✅ Working |
-| Phone-OTP login, profile, addresses, wallet | ✅ Working |
-| Place & track orders | ✅ Working |
-| **Pay — returning customer with a connected (saved) card** | ✅ **Working** (charges inline) |
-| **Pay — online payment / bank transfer (card-less & new customers)** | 🚧 **In progress** |
+## Run locally
 
-> **Right now, ordering end-to-end only completes for existing customers who have
-> a card already connected to their Chowdeck account.** Online payment (bank
-> transfer, card-less, and brand-new customers) reaches the Paystack hand-off but
-> is not yet fully automated. See the [Changelog](./CHANGELOG.md) for details.
+Requires Node.js 20 or later.
 
----
-
-## ⚖️ Disclaimer — unofficial & unaffiliated
-
-> **This is an independent, unofficial project. It is not affiliated with,
-> endorsed by, or supported by Chowdeck.** It talks to Chowdeck's private
-> storefront API the same way the official web app does. As a result:
->
-> - **No credentials are bundled.** You authenticate as *yourself* with your own
->   phone + OTP, and supply your own Google Maps key (`CHOWDECK_MAPS_KEY`) for
->   reverse-geocoding. The project ships no API keys or tokens.
-> - **Respect Chowdeck's Terms of Service.** Use it for your own account and
->   personal ordering. Don't scrape, resell, automate abusively, or hammer the
->   API — the client is rate-limit-friendly (timeouts, bounded retries) for that
->   reason. You are responsible for your own use.
-> - **It may break at any time.** Because the API is private and undocumented,
->   Chowdeck can change it without notice. Endpoints marked *best-effort* in the
->   code are inferred and may need updating.
-> - **Trademarks** ("Chowdeck", "Paystack") belong to their owners and are used
->   only to describe interoperability.
->
-> If you represent Chowdeck and would like changes, please open an issue.
-
----
-
-## 🧭 How it works
-
-```mermaid
-flowchart TD
-    A[AI Agent / Claude] -->|MCP stdio| B[Chowdeck MCP server]
-    B --> C{Session on disk?}
-    C -- no --> D[First-time setup:\nphone OTP login + address]
-    C -- yes --> E[Reuse saved session]
-    D --> F[Detect new vs returning user]
-    E --> F
-    F --> G[Discover vendors & menus]
-    G --> H[Build cart]
-    H --> I[Quote delivery fee]
-    I --> J{Payment}
-    J -- saved card --> K[✅ Charged inline\nPIN + rider returned]
-    J -- online / transfer --> L[🚧 Hosted pay link\n→ Paystack hand-off]
-    K --> M[Track order]
-    L --> M
-```
-
-> 📌 A richer architecture/visualisation diagram will be added here later.
-
----
-
-## ✨ Features
-
-The server exposes **45 tools** and **4 prompts**, grouped by capability
-(request/response details are intentionally omitted from this README):
-
-- **Setup & session** — persistent login + delivery address, automatic
-  new-vs-returning customer detection, saved payment preference.
-- **Location** — address autocomplete, place details, reverse geocoding (your
-  own `CHOWDECK_MAPS_KEY`), and saving a precisely resolved delivery address.
-- **Discovery** — storefront config, vendor listings with **filters** (sort,
-  open-now, min-rating, max-fee, free-delivery), featured/handpicked vendors,
-  search, menu categories, menus, and individual menu items.
-- **Favourites** — list, add, and remove saved vendors.
-- **Cart** — create/update, list all, per-vendor view, clear, delete, and
-  **reorder** from a past order.
-- **Auth** — Nigerian phone-number OTP login and profile lookup.
-- **Account** — saved addresses, wallet balance, order history, payment methods.
-- **Orders & checkout** — delivery-fee quote, place order (with optional
-  **scheduled delivery**, **rider tip**, and **promo codes**), **live order
-  tracking** (status/ETA/PIN/rider), active orders, order detail, payment
-  channels, payment start/verify, and **wallet top-up**.
-
-**Safety:** every tool is hinted `readOnly` or `destructive`; money-moving and
-data-loss tools (`place_order`, `wallet_topup`, `clear_carts`, `delete_cart`,
-`logout`) require an explicit `confirm: true` and otherwise return a
-"confirm with the user first" no-op. Large responses are slimmed to keep token
-use low; `get_session` / `get_setup_status` return structured output.
-
-**Prompts:** `order_food`, `find_food_near_me`, `track_my_order`,
-`reorder_my_usual`.
-
-Sessions persist to `~/.chowdeck-mcp/session.json` (written `0600`), so the
-one-time login and address setup survive restarts.
-
----
-
-## 🌳 Working tree
-
-```
-chowdeck-mcp/
-├── mcp/                      # The MCP server
-│   ├── src/
-│   │   ├── index.ts          # Tool definitions + server wiring (stdio)
-│   │   ├── api.ts            # Chowdeck API client
-│   │   └── session.ts        # Disk-persisted session store
-│   ├── package.json
-│   └── tsconfig.json
-├── skill/
-│   └── chowdeck/
-│       └── SKILL.md          # Claude/agent skill: how to drive the server
-├── .github/
-│   ├── workflows/ci.yml      # Build + smoke-test on push/PR
-│   └── FUNDING.yml           # Sponsorship
-├── CHANGELOG.md
-├── LICENSE                   # MIT
-└── README.md
-```
-
----
-
-## 🚀 Getting started
-
-### Prerequisites
-- Node.js 20+ and npm
-- A Nigerian phone number with a Chowdeck account (for authenticated flows)
-
-### Install & build
-
-```bash
-git clone https://github.com/thathman/chowdeck-mcp.git
+```sh
+git clone https://github.com/atomicman57/chowdeck-mcp.git
 cd chowdeck-mcp/mcp
-npm install
+npm ci --ignore-scripts
 npm run build
+node dist/index.js
 ```
 
-### Register with an MCP client
+For Claude Code, from your checkout:
 
-> **Note:** An MCP server is not "installed" like an app — it is registered with
-> your agent/client as a command the client launches over stdio. You cannot
-> simply tell a client to "install this repo"; point it at the built server (or
-> at `npx` once published — see below).
-
-**Claude Code / CLI:**
-
-```bash
+```sh
 claude mcp add chowdeck -- node /absolute/path/to/chowdeck-mcp/mcp/dist/index.js
 ```
 
-**OpenClaw / generic MCP client (`mcpServers` config):**
+For Codex, Claude Desktop, Cursor and other stdio hosts, use the equivalent MCP configuration:
 
 ```json
 {
@@ -179,63 +49,48 @@ claude mcp add chowdeck -- node /absolute/path/to/chowdeck-mcp/mcp/dist/index.js
 }
 ```
 
-Add that block to your client's MCP config (for OpenClaw, its MCP servers
-settings), then restart the client. The agent will then see the `chowdeck` tools.
+The Node runtime defaults to a session file under `~/.chowdeck-mcp/session.json` with restrictive filesystem permissions. This file contains account credentials and is **not encrypted**. For temporary sessions set `CHOWDECK_SESSION_PERSISTENCE=memory`. For encrypted storage, configure your own `CHOWDECK_CREDENTIAL_HELPER` executable and optional `CHOWDECK_CREDENTIAL_SESSION` name: the helper must support `get-session NAME` (JSON on stdout) and `put-session NAME` (JSON on stdin). A missing record should report `is missing from the central store` on stderr; other failures stop operation without writing a plaintext fallback. The helper itself is supplied by the operator.
 
-### One-line install via npx
+Call `get_setup_status` before ordering. OTP sending requires explicit approval. Confirm the delivery address, recipient, vendor, items, payment method and live total before placement. Credentials are never included in tool responses.
 
-Published to npm as **[`@thathman/chowdeck-mcp`](https://www.npmjs.com/package/@thathman/chowdeck-mcp)** —
-no clone or build needed; clients launch it directly:
+## Host for trusted agents
 
-```json
-{
-  "mcpServers": {
-    "chowdeck": {
-      "command": "npx",
-      "args": ["-y", "@thathman/chowdeck-mcp"],
-      "env": { "CHOWDECK_MAPS_KEY": "your-google-maps-key (optional, for reverse_geocode)" }
-    }
-  }
-}
+The Cloudflare Worker is **single-account**: every authorized client shares one Chowdeck account. Deploy a separate Worker for each owner. Do not treat this as multi-tenant hosting.
+
+```sh
+cd mcp
+npm ci --ignore-scripts
+npm test
+npx wrangler deploy
+npx wrangler secret put OWNER_ACCESS_KEY
+npx wrangler secret put SESSION_ENCRYPTION_KEY
 ```
 
-### As an agent skill
-The bundled [`skill/chowdeck/SKILL.md`](./skill/chowdeck/SKILL.md) tells the agent
-how to run first-time setup, branch on new-vs-returning customers, resolve an
-exact delivery address, and always confirm the order (and announce the delivery
-PIN + rider) before checkout.
+Choose your own Worker name in `mcp/wrangler.jsonc`. Generate a random owner key of at least 32 characters and a separate 32-byte AES key encoded as exactly 64 hexadecimal characters; save both in your password manager and enter them into the secret prompts. Losing or changing the encryption key makes existing encrypted account state unreadable. No account IDs, deployed endpoint or secret values are bundled.
 
----
+The Worker exposes:
 
-## 🔐 Privacy & security
+- `/mcp`: authenticated Streamable HTTP MCP.
+- `/setup`: owner-protected phone/OTP sign-in form; enter codes directly here rather than in chat.
+- OAuth discovery, dynamic registration, PKCE S256 and explicit owner consent with `chowdeck.read` / `chowdeck.write` scopes. One-hour access tokens and rotating refresh tokens valid until revoked.
+- `/health`: public, credential-free service status.
+- `/oauth-status`: owner-key-protected, sanitized last OAuth event, with no codes or tokens.
 
-- Your auth token, guest id, address id, phone, and payment preference live only
-  in `~/.chowdeck-mcp/session.json` on your machine. Nothing is sent anywhere
-  except Chowdeck's own API.
-- OTP codes and tokens are treated as secrets and are never echoed back in
-  summaries.
-- Run `logout` (a tool) to wipe the saved session.
+The account session and application state use AES-GCM encrypted Durable Object storage. HTTP requests are serialized for this shared account; deployments preserve its data. OAuth authorization connects an agent to the MCP; the separate Chowdeck phone/OTP sign-in connects the account.
 
----
+For a stdio-only client connecting to **your own** deployment, run `node hosting/bridge.mjs` with `CHOWDECK_MCP_URL` and `CHOWDECK_MCP_TOKEN` injected by a secret-manager launcher. Do not commit tokens in client configuration. The bridge never automatically retries a failed purchase request.
 
-## 📒 Changelog
+For loopback HTTP instead, set a random `CHOWDECK_HTTP_TOKEN` of at least 32 characters and run `node dist/index.js --http`; it binds to `127.0.0.1:8147`.
 
-See **[CHANGELOG.md](./CHANGELOG.md)** for version history and the current state
-of the online-payment work.
+## Verification and contribution
 
----
+```sh
+cd mcp
+npm ci --ignore-scripts
+npm test
+npm audit
+```
 
-## 💜 Sponsor
+The 27 tests build both runtimes and cover synthetic gift/wallet checkout, exact fees and shortfalls, price/vendor blocking, durable duplicate protection, login renewal, OAuth/PKCE, encrypted state restoration, owner/CSRF protection and image handling. They do not make paid orders. Existing account login, live charges, gifts and deliveries require separate authorized verification.
 
-If this saves you time, consider [sponsoring the project](https://github.com/sponsors/thathman).
-
----
-
-## 📄 License & attribution
-
-Licensed under the **[MIT License](./LICENSE)** — free to use, copy, modify, and
-distribute (including commercially); just keep the copyright and license notice.
-
-Built and maintained by **[Hendrix Nwaokolo (@thathman)](https://github.com/thathman)**
-/ [Airix Media](https://airixmedia.com). A credit or ⭐ is always appreciated.
-
+See [SECURITY.md](SECURITY.md) for deployment boundaries. The npm package is marked private in this fork to avoid accidentally publishing under the original author's package name; build from source or deploy your own Worker.

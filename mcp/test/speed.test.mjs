@@ -23,7 +23,7 @@ const server=http.createServer(async(req,res)=>{
  else if(req.url==='/customer/delivery/amount')data={id:4,final_delivery_amount:10000,final_service_amount:10000};
  else if(req.url==='/customer/discount/apply')data=[];
  else if(req.url==='/customer/cart/vendor/1')data={id:9,class:'delivery',bag_quantity:0,cart_items:[{item_id:11,name:'Test kit',quantity:1,price_per_quantity:500000,in_stock:stock,pack_reference:'quick-1'}]};
- else if(req.url.startsWith('/customer/order/old'))data={id:'old',vendor_id:1,customer_address_id:5,gift_recipient:JSON.stringify({name:'Test Recipient',phone:'08012345678',donor_name:'Sender',country_code:'NG'}),order_items:[{item_id:11,type:'menu',quantity:1,pack_reference:'A'}]};
+ else if(req.url.startsWith('/customer/order/old'))data={id:'old',vendor_id:1,customer_address_id:5,customer_delivery_note:'Old fallback line',gift_recipient:JSON.stringify({name:'Test Recipient',phone:'08012345678',donor_name:'Sender',country_code:'NG'}),order_items:[{item_id:11,type:'menu',quantity:1,pack_reference:'A'}]};
  else if(req.url==='/customer/order'){if(failOrder){res.statusCode=503;return res.end('{"message":"synthetic unavailable"}');}data={id:123,order_number:'TEST123',delivery_pin:'0000'};}
  else data=[];
  res.end(JSON.stringify({status:'success',data}));
@@ -58,7 +58,7 @@ test('unknown synthetic placement reconciles and never rebuilds or blindly retri
  failOrder=true;const request={...args(),confirm:true,expected_total_naira:5200};assert.equal((await quick.quickOrder(request)).status,'unknown');const writes=calls.filter(c=>c.method!=='GET').length;assert.equal((await quick.quickOrder(request)).status,'unknown');assert.equal(calls.filter(c=>c.method!=='GET').length,writes);assert.equal(calls.filter(c=>c.url==='/customer/order').length,1);
 });
 test('fast reorder dry-run reconstructs a past order without calling native repeat or changing a cart',async()=>{
- const result=await quick.reorderFast({past_order_id:'old',max_total_naira:6000,idempotency_key:'repeat-test',confirm:false});assert.equal(result.total_naira,5200);assert.ok(!calls.some(c=>c.url.endsWith('/repeat')||c.method==='DELETE'||c.url==='/customer/order'));
+ const result=await quick.reorderFast({past_order_id:'old',max_total_naira:6000,idempotency_key:'repeat-test',confirm:false});assert.equal(result.total_naira,5200);assert.equal(result.rider_note,'Synthetic note');const override=await quick.reorderFast({past_order_id:'old',max_total_naira:6000,idempotency_key:'repeat-override',rider_note:'Explicit note',confirm:false});assert.equal(override.rider_note,'Explicit note');assert.ok(!calls.some(c=>c.url.endsWith('/repeat')||c.method==='DELETE'||c.url==='/customer/order'));
 });
 
 test('multi-menu fetching runs at bounded concurrency twelve',async()=>{latency=30;const result=await fast.menuSlim({vendor_ids:Array.from({length:24},(_,i)=>i+1)});assert.equal(result.vendors.length,24);assert.ok(peak>=10&&peak<=12);});

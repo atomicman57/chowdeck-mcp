@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased speed improvements] — 2026-10-27
 
+- Follow-up GrokBot dry-run validation: apply the current configured default recipient’s rider note on fast reorders, with an explicit rider_note override. Preserve historical notes for other recipients.
+
 - Preserve all 68 existing tools and add five: cross-vendor search, slim multi-menu reads, batch photo URLs, quick ordering and fast reorder.
 - Add versioned KV caching, bounded concurrency of twelve, a shared three-second upstream menu deadline per vendor, background revalidation and favourite prewarming on session refresh.
 - Add elapsed_ms to every tool response; reduce JSON formatting overhead and decode encoded menu photos to validated direct image URLs.

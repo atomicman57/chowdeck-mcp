@@ -26,7 +26,7 @@ To purchase, obtain explicit approval of the returned address, recipient, items,
 
 Attempt reservations persist before cart mutation. Completed keys replay the saved result before touching a cart. Different inputs cannot reuse a key. Unknown outcomes return `placed:null`, active-order/order-log reconciliation evidence and `retry_allowed:false`; they are never blindly retried. Successful responses contain order number, returned PIN, total, payment status, fresh wallet balance when readable and elapsed time. Synthetic tests cover placement paths; real charging is not established by the benchmarks below.
 
-`reorder_fast` accepts a past order ID or saved favourite recipe name, cap and stable key. It preserves original packs, options, recipient and saved delivery address. Ambiguous original options require review. It uses the same confirmation, budget and idempotency safeguards; `confirm:false` never invokes the native cart-rebuilding endpoint.
+`reorder_fast` accepts a past order ID or saved favourite recipe name, cap and stable key. It preserves original packs, options, recipient and saved delivery address. For the configured default recipient, its current saved rider note takes precedence over a historical note; other recipients retain their original notes. An explicit `rider_note` overrides either. Ambiguous original options require review. It uses the same confirmation, budget and idempotency safeguards; `confirm:false` never invokes the native cart-rebuilding endpoint.
 
 Operators may set `QUICK_ORDER_DEFAULTS` as a Worker secret JSON with `gift_recipient` and `rider_note`. No personal contact details are shipped in source. Explicit `gift_recipient:null` selects a self order; an omitted recipient uses the configured default.
 

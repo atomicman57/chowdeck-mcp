@@ -187,6 +187,7 @@ export async function reorderFast(args: {
     confirm?: boolean;
     expected_total_naira?: number;
     address_label?: string;
+    rider_note?: string;
 }) {
     const recipe = args.favourite_name ? session.data?.recipes?.[args.favourite_name.trim().toLowerCase()] : null, id = args.past_order_id ?? recipe?.order_id;
     if (!id)
@@ -218,5 +219,8 @@ export async function reorderFast(args: {
     }
     if (!items.length || items.some((i: any) => !Number.isInteger(i.menu_id) || !Number.isInteger(i.qty) || i.qty < 1 || i.options.some((o: any) => !Number.isInteger(o.qty) || o.qty < 1)))
         throw Error('Original items/options cannot be reconstructed exactly; use the existing native reorder tool and review its cart instead.');
-    return quickOrder({ ...args, vendor_id: Number(old.vendor_id ?? old.vendor?.id), items, gift_recipient: originalGift, rider_note: old.customer_delivery_note ?? undefined, payment_method: 'wallet' }, { sourceAddressId: args.address_label ? undefined : Number(old.customer_address_id ?? old.address?.id) || undefined, details: catalog });
+    // Apply the current note only for the configured default recipient; preserve other recipients' notes.
+    const sameDefaultRecipient = originalGift?.phone && defaults.gift_recipient?.phone && api.normalizePhone(originalGift.phone) === api.normalizePhone(defaults.gift_recipient.phone);
+    const riderNote = args.rider_note ?? (sameDefaultRecipient ? defaults.rider_note : undefined) ?? old.customer_delivery_note;
+    return quickOrder({ ...args, vendor_id: Number(old.vendor_id ?? old.vendor?.id), items, gift_recipient: originalGift, rider_note: riderNote, payment_method: 'wallet' }, { sourceAddressId: args.address_label ? undefined : Number(old.customer_address_id ?? old.address?.id) || undefined, details: catalog });
 }

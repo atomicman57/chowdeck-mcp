@@ -1,6 +1,8 @@
 import { createServer } from '../src/server.ts';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import * as api from "../src/api.ts";
+import * as fast from "../src/fast.ts";
+import {configureQuickDefaults} from "../src/quick.ts";
 import { session, loadSession, exportSession, setPersistenceHook } from './session.mjs';
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','cache-control':'no-store',...headers}});
 const b64=bytes=>btoa(String.fromCharCode(...new Uint8Array(bytes))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
@@ -21,6 +23,9 @@ export class ChowdeckAccount {
  fetch(request){const task=this.queue.then(()=>this.handle(request));this.queue=task.catch(()=>{});return task.catch(()=>json({error:'Request failed; no details logged.'},500));}
  async handle(request){
   const url=new URL(request.url),base=url.origin,store=this.ctx.storage;
+  fast.configureFastCache(this.env.CHOWDECK_CACHE,p=>this.ctx.waitUntil?.(p));
+  configureQuickDefaults(JSON.parse(this.env.QUICK_ORDER_DEFAULTS??'{}'));
+  api.setSessionRefreshHook(()=>{fast.prewarmFavorites().catch(()=>{});});
   if(url.pathname==='/health')return json({service:'chowdeck-mcp',version:'0.7.0-rc.1',status:'ok',authentication:'required',live_paid_checkout_verified:false});
   if(url.pathname.startsWith('/.well-known/oauth-protected-resource'))return json({resource:`${base}/mcp`,authorization_servers:[base],scopes_supported:[READ_SCOPE,WRITE_SCOPE],bearer_methods_supported:['header']});
   if(url.pathname==='/.well-known/oauth-authorization-server'||url.pathname==='/.well-known/openid-configuration')return json({issuer:base,authorization_endpoint:`${base}/authorize`,token_endpoint:`${base}/token`,registration_endpoint:`${base}/register`,revocation_endpoint:`${base}/revoke`,response_types_supported:['code'],grant_types_supported:['authorization_code','refresh_token'],token_endpoint_auth_methods_supported:['none'],code_challenge_methods_supported:['S256'],scopes_supported:[READ_SCOPE,WRITE_SCOPE]});
@@ -100,7 +105,7 @@ export class ChowdeckAccount {
    if(!client||!client.redirect_uris.includes(p.redirect_uri)||p.response_type!=='code'||p.code_challenge_method!=='S256'||!/^[A-Za-z0-9_-]{43}$/.test(p.code_challenge??''))return json({error:'invalid_request'},400);
    const scope=p.scope||READ_SCOPE;if(scope.split(' ').some(s=>![READ_SCOPE,WRITE_SCOPE].includes(s)))return json({error:'invalid_scope'},400);
    const nonce=random();await store.put(`pending:${await hash(nonce)}`,{...p,scope,expires:now()+600});
-   const html=`<!doctype html><meta name="viewport" content="width=device-width"><title>Authorize Chowdeck MCP</title><style>body{font:17px system-ui;max-width:620px;margin:8vh auto;padding:24px}input,button{font:inherit;padding:12px;width:100%;box-sizing:border-box;margin:10px 0}</style><h1>Connect ${esc(client.name)}</h1><p>This agent will access the owner’s shared Chowdeck account.</p><p>Permissions: <strong>${esc(scope)}</strong></p><p>Callback: ${esc(p.redirect_uri)}</p><p>Only approve a connection you just requested. Ordering agents must still obtain approval of the exact order and total before charging.</p><form method="post" action="/authorize"><input type="hidden" name="csrf" value="${nonce}"><label>Owner access key<input type="password" name="key" autocomplete="current-password" required></label><button>Authorize this agent</button></form>`;
+   const html=`<!doctype html><meta name="viewport" content="width=device-width"><title>Authorize Chowdeck MCP</title><style>body{font:17px system-ui;max-width:620px;margin:8vh auto;padding:24px}input,button{font:inherit;padding:12px;width:100%;box-sizing:border-box;margin:10px 0}</style><h1>Connect ${esc(client.name)}</h1><p>This agent will access the owner's shared Chowdeck account.</p><p>Permissions: <strong>${esc(scope)}</strong></p><p>Callback: ${esc(p.redirect_uri)}</p><p>Only approve a connection you just requested. Ordering agents must still obtain approval of the exact order and total before charging.</p><form method="post" action="/authorize"><input type="hidden" name="csrf" value="${nonce}"><label>Owner access key<input type="password" name="key" autocomplete="current-password" required></label><button>Authorize this agent</button></form>`;
    return new Response(html,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':`default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${new URL(p.redirect_uri).origin}; frame-ancestors 'none'; base-uri 'none'`,'set-cookie':`chowdeck_consent=${nonce}; HttpOnly; Secure; SameSite=Lax; Path=/authorize; Max-Age=600`,'referrer-policy':'strict-origin-when-cross-origin'}});
   }
   if(url.pathname==='/authorize'&&request.method==='POST'){

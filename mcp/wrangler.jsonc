@@ -3,10 +3,32 @@
   "name": "chowdeck-mcp",
   "main": "hosting/worker.bundle.mjs",
   "compatibility_date": "2026-10-26",
-  "compatibility_flags": ["nodejs_compat"],
-  "build": { "command": "npm run build:hosted" },
-  "durable_objects": {
-    "bindings": [{ "name": "CHOWDECK_ACCOUNT", "class_name": "ChowdeckAccount" }]
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "build": {
+    "command": "npm run build:hosted"
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChowdeckAccount"] }]
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CHOWDECK_ACCOUNT",
+        "class_name": "ChowdeckAccount"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "ChowdeckAccount"
+      ]
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CHOWDECK_CACHE",
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+    }
+  ]
 }

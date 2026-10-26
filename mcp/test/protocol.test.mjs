@@ -28,7 +28,7 @@ test('MCP end-to-end: login, wallet preference, gift checkout, confirmation gate
  const transport=new StdioClientTransport({command:process.execPath,args:['dist/index.js'],env:{...process.env,CHOWDECK_CREDENTIAL_HELPER:'',CHOWDECK_API_BASE:`http://127.0.0.1:${mock.address().port}`,CHOWDECK_SESSION_DIR:dir},stderr:'pipe'});
  const client=new Client({name:'integration-test',version:'1'});
  const call=async(name,args={})=>{
-  const r=await client.callTool({name,arguments:args});assert.ok(!r.isError,JSON.stringify(r));return JSON.parse(r.content[0].text);
+  const r=await client.callTool({name,arguments:args});assert.ok(!r.isError,JSON.stringify(r));assert.equal(typeof r._meta.elapsed_ms,'number');const body=JSON.parse(r.content[0].text);assert.equal(typeof body.elapsed_ms,'number');return body;
  };
  try {
   await client.connect(transport);

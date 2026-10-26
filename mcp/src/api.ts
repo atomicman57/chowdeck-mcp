@@ -18,6 +18,8 @@ if (process.env.CHOWDECK_HTTP_ADAPTER === "fetch") {
   axios.defaults.fetchOptions = { cache: "no-store" };
 }
 
+let sessionRefreshHook: (()=>void) | undefined;
+export function setSessionRefreshHook(fn?:()=>void){sessionRefreshHook=fn;}
 let refreshInFlight: Promise<void> | null = null;
 
 /** Storefront-confirmed token renewal; no browser session extraction. */
@@ -34,6 +36,8 @@ export async function refreshSessionToken(): Promise<void> {
       const token = response.data?.token ?? response.data?.data?.token;
       if (typeof token !== "string" || !token) throw new Error("Missing refreshed token");
       session.token = token;
+      // Cache prewarming must never turn successful renewal into an auth failure.
+      try { sessionRefreshHook?.(); } catch { }
     } catch {
       throw new Error("Chowdeck could not renew this session. Sign in again if it has been revoked; no order was automatically repeated after an ambiguous failure.");
     }
@@ -189,10 +193,11 @@ export async function getVendors(params: {
   max_delivery_fee?: number;
   free_delivery?: boolean;
   page?: number;
+  cursor?: string;
 }) {
   const id = params.address_id ?? session.addressId;
   if (!id) throw new Error("No address set. Call set_address first.");
-  return (await client().get("/customer/vendor/v2", { params: { address_id: id, ...params } })).data;
+  return (await client().get("/customer/vendor/v2", { params: { address_id: id, ...params, cursor: undefined, next_cursor: params.cursor } })).data;
 }
 
 export async function getFeaturedVendors(tag: "featured" | "handpicked" | "explore") {
@@ -206,9 +211,9 @@ export async function getMenuCategories(vendorId: number) {
   return (await client().get(`/customer/vendor/${vendorId}/menu-category`)).data;
 }
 
-export async function getMenu(vendorId: number, category?: string) {
+export async function getMenu(vendorId: number, category?: string, options: {timeout_ms?: number} = {}) {
   const res = (await client().get(`/customer/vendor/${vendorId}/menu`, {
-    params: { return_out_of_stock: 1 },
+    params: { return_out_of_stock: 1 }, timeout: options.timeout_ms, ...(options.timeout_ms ? {_noRetry:true} : {}),
   })).data;
   // Optional client-side category filter so large menus stay small enough to
   // avoid response truncation (e.g. items in smaller categories getting cut off).
@@ -221,8 +226,8 @@ export async function getMenu(vendorId: number, category?: string) {
   return res;
 }
 
-export async function getMenuItem(vendorId: number, menuId: number) {
-  return (await client().get(`/customer/vendor/${vendorId}/menu/${menuId}`)).data;
+export async function getMenuItem(vendorId: number, menuId: number, options: {timeout_ms?: number} = {}) {
+  return (await client().get(`/customer/vendor/${vendorId}/menu/${menuId}`, {timeout:options.timeout_ms, ...(options.timeout_ms ? {_noRetry:true} : {})})).data;
 }
 
 export async function searchVendors(
@@ -484,9 +489,9 @@ export async function getPaymentChannels(country_identifier = "NG") {
   })).data;
 }
 
-export async function getVendor(vendorId: number) {
+export async function getVendor(vendorId: number, addressId?: number) {
   return (await client().get(`/customer/vendor/${vendorId}`, {
-    params: { address_id: session.addressId },
+    params: { address_id: addressId ?? session.addressId },
   })).data;
 }
 
@@ -715,7 +720,7 @@ export function summarizeCheckout(cart: any, vendor: any, wallet: any, fee: any,
   if (!complete) issues.push({ code: "quote_incomplete", message: "Missing price/fee/bag fields: do not place until a full live total is available." });
   const minimum = vendor.minimum_order_amount;
   if (finite(minimum) && finite(subtotal) && subtotal < minimum) issues.push({ code: "below_minimum_order", minimum_naira: minimum / 100, shortfall_naira: (minimum - subtotal) / 100 });
-  const balance = wallet.total_balance;
+  const balance = wallet.total_balance ?? wallet.total;
   const shortfall = total !== null && finite(balance) ? Math.max(0, total - balance) : null;
   if ((opts.payment_method ?? "wallet") === "wallet" && shortfall !== null && shortfall > 0) issues.push({ code: "wallet_shortfall", shortfall_naira: shortfall / 100 });
   if (total !== null && opts.max_total_naira !== undefined && total > Math.round(opts.max_total_naira * 100)) issues.push({ code: "over_budget", max_total_naira: opts.max_total_naira, total_naira: total / 100 });
@@ -724,7 +729,7 @@ export function summarizeCheckout(cart: any, vendor: any, wallet: any, fee: any,
 /** One round trip from the agent; independent API reads execute together. */
 export async function prepareCheckout(vendorId: number, addressId?: number, opts: CheckoutOptions = {}) {
   const [cart, vendor, wallet, methods, beneficiaries, config] = await Promise.all([
-    getCartByVendor(vendorId), getVendor(vendorId), getWallet(), getPaymentMethods(), listBeneficiaries(), getConfig(),
+    getCartByVendor(vendorId), getVendor(vendorId,addressId), getWallet(), getPaymentMethods(), listBeneficiaries(), getConfig(),
   ]);
   if (!cart?.data?.id) throw new Error("Build a cart before preparing checkout.");
   const fee = cart.data.class === "pickup" ? null : await getDeliveryFee({ vendor_id: vendorId, cart_id: Number(cart.data.id), address_id: addressId, source_id: vendor?.data?.address_id, order_class: cart.data.class });
@@ -751,4 +756,13 @@ export async function verifyPayment(transactionId: string) {
 
 export async function getOrderPaymentStatus(orderId: string) {
   return (await client().get(`/order/${orderId}/payment`)).data;
+}
+
+/** Read-only fee/discount quote for an in-memory draft. Never creates a cart. */
+export async function previewDraftCheckout(vendorId:number,addressId:number,cart:any,vendor:any,wallet:any,config:any,opts:CheckoutOptions={}) {
+ const {items,containers}=checkoutItems(cart);
+ const fee=(await client().post('/customer/delivery/amount',{vendor_id:vendorId,destination_id:addressId,source_id:vendor.address_id,order_class:'delivery',currency:'NGN',country_code:'NG',order_items:items,containers})).data;
+ const applied=(await client().post('/customer/discount/apply',{promo_codes:[],vendor_id:vendorId,address_id:addressId,fee_id:fee?.data?.id??0,currency:'NGN',order_items:items,containers,delivery_fee:fee?.data?.final_delivery_amount??0,order_class:'delivery'})).data;
+ if(!Array.isArray(applied?.data))throw Error('Discount quote unavailable.');
+ return {summary:summarizeCheckout(cart,vendor,wallet,fee?.data,config,applied.data,opts)};
 }

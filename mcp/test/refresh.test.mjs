@@ -14,7 +14,7 @@ const server=http.createServer(async(req,res)=>{
 await new Promise(r=>server.listen(0,'127.0.0.1',r));process.env.CHOWDECK_API_BASE=`http://127.0.0.1:${server.address().port}`;
 const api=await import('../dist/api.js');const {session}=await import('../dist/session.js');
 test('concurrent expiry responses share one refresh and persist the renewed token',async()=>{
- session.token='expired-session';await Promise.all([api.getMe(),api.getWallet()]);assert.equal(refreshes,1);assert.equal(session.token,'renewed-session');assert.equal(gets,2);
+ let hookCalls=0;api.setSessionRefreshHook(()=>{hookCalls++;throw Error('Synthetic cache failure');});session.token='expired-session';await Promise.all([api.getMe(),api.getWallet()]);assert.equal(refreshes,1);assert.equal(session.token,'renewed-session');assert.equal(gets,2);assert.equal(hookCalls,1);api.setSessionRefreshHook(undefined);
 });
 test('explicit 401 authentication rejection permits one safe replay, with only one successful charge',async()=>{
  session.token='expired-session-again';await api.tipRider('123',50000);assert.equal(charges,1);assert.equal(session.token,'renewed-session');

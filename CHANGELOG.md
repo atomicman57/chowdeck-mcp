@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased speed improvements] — 2026-10-27
+
+- Preserve all 68 existing tools and add five: cross-vendor search, slim multi-menu reads, batch photo URLs, quick ordering and fast reorder.
+- Add versioned KV caching, bounded concurrency of twelve, a shared three-second upstream menu deadline per vendor, background revalidation and favourite prewarming on session refresh.
+- Add elapsed_ms to every tool response; reduce JSON formatting overhead and decode encoded menu photos to validated direct image URLs.
+- Preserve exact-total approval and durable idempotency; dry runs never mutate carts or place/pay orders. Unknown placement outcomes reconcile without automatic retry.
+- 41 tests pass. See SPEED.md for measured read-only latency, raw JSON size limits and upstream availability caveats.
+
 ## [0.7.0-rc.1] — 2026-10-26
 
 ### Added

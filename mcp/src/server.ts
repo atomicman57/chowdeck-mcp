@@ -16,16 +16,29 @@ import { z } from "zod";
 import * as api from "./api.js";
 import * as workflows from "./workflows.js";
 import * as media from "./media.js";
+import * as fast from "./fast.js";
+import * as quick from "./quick.js";
 import { API_MAP } from "./api-map.js";
 import { session, clearSession } from "./session.js";
 
 export function createServer() {
 const server = new McpServer({ name: "chowdeck", version: "0.7.0-rc.1" });
+// Time every tool, including confirmation no-ops and failures, without changing images.
+const registerTool=server.registerTool.bind(server) as any;
+(server as any).registerTool=(name:string,config:any,handler:any)=>registerTool(name,{...config,...(config.outputSchema?{outputSchema:{...config.outputSchema,elapsed_ms:z.number()}}:{})},async(...args:any[])=>{
+ const started=performance.now();let result:any;
+ try{result=await handler(...args);}catch(error:any){result={isError:true,content:[{type:'text',text:JSON.stringify({error:error?.message??'Tool failed'})}]};}
+ const elapsed_ms=Math.round(performance.now()-started);
+ result.content=(result.content??[]).map((part:any)=>{if(part.type!=='text')return part;try{const data=JSON.parse(part.text);if(data&&typeof data==='object'&&!Array.isArray(data))return {...part,text:JSON.stringify({...data,elapsed_ms})};}catch{}return part;});
+ if(result.structuredContent)result.structuredContent={...result.structuredContent,elapsed_ms};
+ result._meta={...result._meta,elapsed_ms};return result;
+});
+
 
 // ── Result helpers ──────────────────────────────────────────────────────────
 
 function res(data: unknown): { content: { type: "text"; text: string }[]; structuredContent?: any } {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+  return { content: [{ type: "text" as const, text: JSON.stringify(data) }] };
 }
 
 /**
@@ -547,7 +560,7 @@ server.registerTool(
   "place_order",
   {
     description:
-      "Place an order from a cart (requires login). DESTRUCTIVE — charges money. Requires confirm:true, which you should set ONLY after confirming items, vendor, delivery fee, and total with the user. Supports wallet, saved card, gifts, split wallet, pickup and vendor preorder windows. Use online_payment plus online_channel for hosted payment. Never retry an ambiguous placement: check active orders first. Live charging of this development build is not yet verified.",
+      "Place an order from a cart (requires login). DESTRUCTIVE — charges money. Requires confirm:true, which you should set ONLY after confirming items, vendor, delivery fee, and total with the user. Supports wallet, saved card, gifts, split wallet, pickup and vendor preorder windows. Use online_payment plus online_channel for hosted payment. Never retry an ambiguous placement: check active orders first. Live charging of this build is not yet verified.",
     inputSchema: {
       vendor_id: z.number(),
       cart_id: z.number(),
@@ -809,5 +822,12 @@ server.registerPrompt(
 );
 
 
+const FAST_READ={readOnlyHint:true,openWorldHint:true};
+server.registerTool('search_items_everywhere',{description:'Search synonyms across every page of nearby vendors and menus with bounded concurrency, cached menus, explicit coverage and stock flags. No cart or order changes.',inputSchema:{queries:z.array(z.string().min(1).max(120)).min(1).max(20),vendor_type:z.string().optional(),open_now:z.boolean().default(true),in_stock_only:z.boolean().default(false),max_distance_km:z.number().positive().optional(),max_vendors:z.number().int().min(1).max(60).default(60)},annotations:FAST_READ},async(args)=>res(await fast.searchEverywhere(args)));
+server.registerTool('get_menu_slim',{description:'Fetch many complete slim menus in parallel. Includes real image URLs and only required option groups. Prices/stock may be cached; purchasing always revalidates live data.',inputSchema:{vendor_ids:z.array(z.number().int().positive()).min(1).max(60),category:z.string().optional(),in_stock_only:z.boolean().default(true),include_images:z.boolean().default(true)},annotations:FAST_READ},async(args)=>res(await fast.menuSlim(args)));
+server.registerTool('get_food_images_batch',{description:'Return real public photo URLs for many menu IDs. Decodes supported Chowdeck image transformations to direct image links. No image embedding.',inputSchema:{items:z.array(z.object({vendor_id:z.number().int().positive(),menu_id:z.number().int().positive()})).min(1).max(120),limit_per_item:z.number().int().min(1).max(5).default(1)},annotations:FAST_READ},async({items,limit_per_item})=>res(await fast.imagesBatch(items,limit_per_item)));
+const QUICK_ITEMS=z.array(z.object({menu_id:z.number().int().positive(),qty:z.number().int().min(1).max(99),pack_reference:z.string().max(100).optional(),options:z.array(z.union([z.number().int().positive(),z.object({menu_id:z.number().int().positive(),qty:z.number().int().min(1).max(99).optional(),group_id:z.number().int().positive().optional()})])).max(30).optional()})).min(1).max(50);
+server.registerTool('quick_order',{description:'One-call checkout; confirm:false is strictly read-only and returns a live draft quote. confirm:true needs the exact approved expected_total_naira, recipient/address and stable key; only the selected vendor cart is replaced. Blocks closed vendors, unavailable items, price changes and over-budget totals. Unknown outcomes are reconciled, never blindly retried.',inputSchema:{vendor_id:z.number().int().positive(),items:QUICK_ITEMS,address_label:z.string().optional(),gift_recipient:z.object({donor_name:z.string(),name:z.string(),phone:z.string(),country_code:z.literal('NG').default('NG'),email:z.string().optional(),message:z.string().optional(),save_as_beneficiary:z.boolean().optional()}).nullable().optional(),rider_note:z.string().optional(),payment_method:z.enum(['wallet','card','online_payment','pay_for_me']).default('wallet'),payment_method_id:z.number().int().positive().optional(),max_total_naira:z.number().positive(),idempotency_key:z.string().trim().min(1).max(120),expected_total_naira:z.number().nonnegative().optional(),confirm:z.boolean().default(false)},annotations:DESTRUCTIVE},async(args)=>res(await quick.quickOrder(args)));
+server.registerTool('reorder_fast',{description:'Prepare a past order or saved recipe in one call, preserving exact items, packs and options. Same dry-run, budget, approval and duplicate safeguards as quick_order. Never purchases with confirm:false.',inputSchema:{past_order_id:z.string().optional(),favourite_name:z.string().optional(),max_total_naira:z.number().positive(),idempotency_key:z.string().trim().min(1).max(120),confirm:z.boolean().default(false),expected_total_naira:z.number().nonnegative().optional(),address_label:z.string().optional()},annotations:DESTRUCTIVE},async(args)=>res(await quick.reorderFast(args)));
 return server;
 }

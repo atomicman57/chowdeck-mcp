@@ -1,11 +1,16 @@
 import { Buffer } from "node:buffer";
 import * as api from "./api.js";
-const IMAGE_HOSTS = new Set(["files.chowdeck.com", "files.chowdeck.studio", "res.cloudinary.com"]);
+const IMAGE_HOSTS = new Set(["files.chowdeck.com", "files.chowdeck.studio", "res.cloudinary.com", "menu-images-production.s3.amazonaws.com"]);
 export function imageUrl(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) return null;
   try {
     const url = new URL(value, "https://files.chowdeck.com/");
     if (url.protocol !== "https:" || url.username || url.password || url.port || !IMAGE_HOSTS.has(url.hostname)) return null;
+    if(url.hostname==='files.chowdeck.com' && url.pathname.startsWith('/eyJ')) {
+      try {const decoded=JSON.parse(Buffer.from(decodeURIComponent(url.pathname.slice(1)), 'base64').toString());
+        if(decoded.bucket==='menu-images-production'&&typeof decoded.key==='string'&&/^[a-zA-Z0-9_./-]+\.(?:jpe?g|png|webp)$/i.test(decoded.key)&&!decoded.key.split('/').includes('..'))return 'https://menu-images-production.s3.amazonaws.com/'+decoded.key.split('/').map(encodeURIComponent).join('/');
+      }catch{}
+    }
     return url.toString();
   } catch { return null; }
 }

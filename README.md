@@ -4,8 +4,10 @@ An unofficial, MIT-licensed MCP server for discovering food, preparing orders an
 
 ## Features
 
-**68 tools and four prompts**, including:
+**73 tools and four prompts**, including:
 
+- Parallel cross-vendor search with synonym matching, slim multi-vendor menus and URL-only batch photos. Ten-minute versioned menu caching, two-minute vendor caching and favourite prewarming on session renewal.
+- `quick_order` and `reorder_fast`: live dry-run quotes without cart writes, exact-total approval, spending caps, fresh vendor/stock checks and durable idempotency. See [speed tools and verification](SPEED.md).
 - Gift-recipient metadata, saved recipient profiles and defaults, rider notes and favourite recipes.
 - `reorder_gift`: prepare a repeat gift with original options/packs, recipient, address, wallet preference, spending cap and current-price comparison. Returns a preview, never a purchase.
 - `prepare_checkout`: parallel cart/account/vendor checks, live delivery/service/bag fees, discount quote, wallet shortfall and vendor/stock/minimum/budget checks. Incomplete fee data blocks a complete quote.
@@ -61,12 +63,16 @@ The Cloudflare Worker is **single-account**: every authorized client shares one 
 cd mcp
 npm ci --ignore-scripts
 npm test
+npx wrangler kv namespace create CHOWDECK_CACHE
+# Put the returned namespace ID in wrangler.jsonc before deployment.
 npx wrangler deploy
 npx wrangler secret put OWNER_ACCESS_KEY
 npx wrangler secret put SESSION_ENCRYPTION_KEY
 ```
 
 Choose your own Worker name in `mcp/wrangler.jsonc`. Generate a random owner key of at least 32 characters and a separate 32-byte AES key encoded as exactly 64 hexadecimal characters; save both in your password manager and enter them into the secret prompts. Losing or changing the encryption key makes existing encrypted account state unreadable. No account IDs, deployed endpoint or secret values are bundled.
+
+Optionally configure `QUICK_ORDER_DEFAULTS` with `wrangler secret put QUICK_ORDER_DEFAULTS`. Its JSON accepts `gift_recipient` (name, phone, donor_name and country_code) and `rider_note`. No personal recipient defaults are bundled. The original tools retain their existing defaults and approval behavior.
 
 The Worker exposes:
 
@@ -91,6 +97,6 @@ npm test
 npm audit
 ```
 
-The 30 tests build both runtimes and cover synthetic gift/wallet checkout, exact fees and shortfalls, price/vendor blocking, durable duplicate protection, login renewal, OAuth/PKCE, encrypted state restoration, owner/CSRF protection and image handling. They do not make paid orders. Existing account login, live charges, gifts and deliveries require separate authorized verification.
+The 41 tests build both runtimes and cover synthetic gift/wallet checkout, exact fees and shortfalls, price/vendor blocking, durable duplicate protection, login renewal, OAuth/PKCE, encrypted state restoration, owner/CSRF protection image handling, parallel search/cache behavior, bounded timeouts, slim menus, URL batches and fast dry-run/idempotency safeguards. They do not make paid orders. Existing account login, live charges, gifts and deliveries require separate authorized verification.
 
 See [SECURITY.md](SECURITY.md) for deployment boundaries. The npm package is marked private in this fork to avoid accidentally publishing under the original author's package name; build from source or deploy your own Worker.

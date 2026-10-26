@@ -1,6 +1,6 @@
 # Chowdeck MCP
 
-An unofficial, MIT-licensed MCP server for discovering food, preparing orders and tracking deliveries on Chowdeck in Nigeria. This fork extends [thathman/chowdeck-mcp](https://github.com/thathman/chowdeck-mcp); original author and copyright notices are preserved. It is not affiliated with Chowdeck or Paystack.
+An unofficial, MIT-licensed MCP server for discovering food, preparing orders and tracking deliveries on Chowdeck. This fork extends [thathman/chowdeck-mcp](https://github.com/thathman/chowdeck-mcp); original author and copyright notices are preserved. It is not affiliated with Chowdeck or Paystack.
 
 ## Features
 

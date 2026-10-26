@@ -1,6 +1,6 @@
 ---
 name: chowdeck
-description: Order food and groceries on Chowdeck (Nigeria). Discover vendors and meals, build a cart, place and track orders. Use when the user wants to find food near them, order a meal, check restaurant menus, or track a Chowdeck delivery. Handles a one-time login (phone + OTP) and saved delivery address.
+description: Order food and groceries on Chowdeck. Discover vendors and meals, build a cart, place and track orders. Use when the user wants to find food near them, order a meal, check restaurant menus, or track a Chowdeck delivery. Handles a one-time login (phone + OTP) and saved delivery address.
 ---
 
 # Chowdeck

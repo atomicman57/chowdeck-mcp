@@ -373,7 +373,7 @@ server.registerTool(
 server.registerTool(
   "login_send_otp",
   {
-    description: "Start phone login: validates the phone and sends an OTP via SMS/WhatsApp.",
+    description: "Start phone login after approval. Chowdeck may require browser verification: use its official sign-in page to request a code, then the hosted /setup form to connect the shared account. Never extract browser tokens.",
     inputSchema: { phone: z.string(), country_code: z.string().default("NG"), ...CONFIRM },
     annotations: WRITE,
   },
@@ -436,7 +436,7 @@ server.registerTool(
       setup_complete: !!session.token && !!session.addressId,
     };
     if (!session.token) {
-      out.next = "Not logged in. Run login_send_otp -> login_verify_otp.";
+      out.next = "Not logged in. Open your hosted /setup page. If Chowdeck requires verification, request a code on its official sign-in page and enter it in the hosted setup form.";
       return { ...res(out), structuredContent: out };
     }
     try {

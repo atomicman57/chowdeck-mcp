@@ -32,7 +32,7 @@
       "mcp_tool": "login_send_otp",
       "evidence": "observed_public_storefront",
       "live_account_verified": false,
-      "note": "",
+      "note": "Requires a valid cf-turnstile-response header from browser verification. Request the code on the official sign-in page; enter that code on hosted /setup to establish a separate MCP session.",
       "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
     },
     {
@@ -47,8 +47,8 @@
       ],
       "mcp_tool": "login_verify_otp",
       "evidence": "observed_public_storefront",
-      "live_account_verified": false,
-      "note": "",
+      "live_account_verified": true,
+      "note": "Verified through the owner-protected hosted code-entry form; tokens remain server-side.",
       "source": "https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js"
     },
     {

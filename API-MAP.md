@@ -11,7 +11,7 @@ Gift orders are `POST /customer/order` with a `gift_recipient` object. Wallet or
 | Method | Path | Inputs / notes | MCP coverage |
 |---|---|---|---|
 | POST | `/auth/phone/validate` | phone, country_code | login_send_otp |
-| POST | `/auth/login` | phone, country_code, role | login_send_otp |
+| POST | `/auth/login` | phone, country_code, role; valid `cf-turnstile-response` header | login_send_otp |
 | POST | `/auth/login/validate-otp` | phone, country_code, role, otp | login_verify_otp |
 | POST | `/auth/refresh-token` | token | automatic renewal |
 | POST | `/auth/resend-otp` | phone, role, country_code, type | Mapped; dedicated tool not yet implemented |
@@ -154,4 +154,4 @@ Gift orders are `POST /customer/order` with a `gift_recipient` object. Wallet or
 
 [Public storefront asset](https://chowdeck.com/store/_next/static/chunks/3488-e1b256a91731e869.js) — SHA-256 `4d0441f975aeecbb72709e282ed6069c078e18cc1ebc4ded8576a4fe83723b0e`. The machine-readable companion has source links and a verification flag for every operation. No authenticated browser credentials were inspected.
 
-Live account-specific wallet charges, gifts, refunds, saved profiles, cancellations and delivery have not yet been verified. Hosted public config retrieval has been verified separately.
+Hosted browser verification, OTP completion and authenticated session health were verified. Live account-specific wallet charges, gifts, refunds, saved profiles, cancellations and delivery have not yet been verified. Hosted public config retrieval has been verified separately.

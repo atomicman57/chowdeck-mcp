@@ -25,7 +25,7 @@ export class ChowdeckAccount {
   if(url.pathname.startsWith('/.well-known/oauth-protected-resource'))return json({resource:`${base}/mcp`,authorization_servers:[base],scopes_supported:[READ_SCOPE,WRITE_SCOPE],bearer_methods_supported:['header']});
   if(url.pathname==='/.well-known/oauth-authorization-server'||url.pathname==='/.well-known/openid-configuration')return json({issuer:base,authorization_endpoint:`${base}/authorize`,token_endpoint:`${base}/token`,registration_endpoint:`${base}/register`,revocation_endpoint:`${base}/revoke`,response_types_supported:['code'],grant_types_supported:['authorization_code','refresh_token'],token_endpoint_auth_methods_supported:['none'],code_challenge_methods_supported:['S256'],scopes_supported:[READ_SCOPE,WRITE_SCOPE]});
   if(!this.env.OWNER_ACCESS_KEY||!this.env.SESSION_ENCRYPTION_KEY)return json({error:'Service configuration incomplete'},503);
-  if(['/register','/authorize','/token','/setup/unlock','/setup/send-otp','/setup/verify-otp'].includes(url.pathname)){
+  if(['/register','/authorize','/token','/setup/unlock','/setup/send-otp','/setup/use-code','/setup/verify-otp'].includes(url.pathname)){
    const bucket=`rate:${await hash(request.headers.get('cf-connecting-ip')??'local')}:${Math.floor(now()/60)}`;
    const count=await store.get(bucket)??0;if(count>=30)return json({error:'Too many authentication requests'},429);await store.put(bucket,count+1);
   }
@@ -65,12 +65,18 @@ export class ChowdeckAccount {
     if(session.token)return page('<h1>Chowdeck is connected</h1><p>Your agents can use this shared account. Sign-in is saved securely and renewed automatically. Every order still needs your approval.</p><p>You can close this page.</p>');
     const pendingPhone=await store.get(`setup-phone:${await hash(adminCookie)}`);
     return pendingPhone?page('<h1>Enter your Chowdeck code</h1><p>Enter the code Chowdeck sent to your phone. It is sent directly to the service, not to the chat.</p><form method="post" action="/setup/verify-otp"><label>One-time code<input name="otp" inputmode="numeric" autocomplete="one-time-code" required></label><button>Complete sign-in</button></form>'):
-     page('<h1>Sign in to Chowdeck</h1><p>Use the phone number on your Chowdeck account. Sending a code does not place an order.</p><form method="post" action="/setup/send-otp"><label>Phone number<input name="phone" type="tel" autocomplete="tel" required></label><button>Send my sign-in code</button></form>');
+     page('<h1>Connect your Chowdeck login</h1><p>Chowdeck requires its browser security verification before sending a code. First open its official sign-in page, enter your phone number and request a login code. If verification appears, complete it there. Do not enter the code on Chowdeck yet.</p><p><a href="https://chowdeck.com/store/sign-in" target="_blank" rel="noopener noreferrer">Open Chowdeck sign-in</a></p><p>Then enter the same phone number below. This step sends no code and places no order.</p><form method="post" action="/setup/use-code"><label>Phone number<input name="phone" type="tel" autocomplete="tel" required></label><button>I requested a code on Chowdeck</button></form>');
+   }
+   if(url.pathname==='/setup/use-code'&&request.method==='POST'){
+    const form=await request.formData();let phone;
+    try{phone=api.normalizePhone(String(form.get('phone')??''));}catch{return page('<h1>Check the phone number</h1><p>Enter the same valid phone number used on Chowdeck.</p><a href="/setup">Return to setup</a>');}
+    await store.put(`setup-phone:${await hash(adminCookie)}`,{phone,expires:now()+600});
+    return new Response(null,{status:303,headers:{location:'/setup','cache-control':'no-store'}});
    }
    if(url.pathname==='/setup/send-otp'&&request.method==='POST'){
     const form=await request.formData(),phone=api.normalizePhone(String(form.get('phone')??''));
     try{await api.validatePhone(phone);await api.sendLoginOtp(phone);await store.put(`setup-phone:${await hash(adminCookie)}`,{phone,expires:now()+600});}
-    catch{return page('<h1>The code could not be sent</h1><p>Chowdeck may require its website sign-in or a security check. No browser credentials were copied.</p><a href="/setup">Try sign-in again</a>');}
+    catch{return page('<h1>Complete Chowdeck verification</h1><p>No code was confirmed sent. Request a code through Chowdeck’s official sign-in page, then enter it here to connect this shared MCP. No browser credentials are copied.</p><a href="/setup">Continue secure sign-in</a>');}
     return new Response(null,{status:303,headers:{location:'/setup','cache-control':'no-store'}});
    }
    if(url.pathname==='/setup/verify-otp'&&request.method==='POST'){

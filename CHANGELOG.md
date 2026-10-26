@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Durable placement idempotency, duplicate protection, order timing logs and refund snapshots.
 - Real menu images as MCP image content, an evidence-backed map of 94 observed storefront operations, and automatic session renewal.
 - Optional Cloudflare Worker hosting with encrypted persistent account state, OAuth/PKCE and owner-protected browser sign-in; authenticated loopback HTTP and stdio bridge alternatives.
-- 27 tests covering synthetic checkout, renewal, encryption, OAuth and image handling. Live account-specific payment and delivery remain unverified.
+- 30 tests covering synthetic checkout, renewal, encryption, OAuth and image handling. Live account-specific payment and delivery remain unverified.
 
 ### Fixed
+- Handle Chowdeck browser security verification through an owner-protected external-code handoff; report security-required OTP errors clearly and never claim login success without a token. Authentication tokens are kept out of verification responses.
 - Favourites routes, native reorder pack preservation, wallet-funding units and endpoint, tip conversion and vendor preorder windows.
 
 ## [Unreleased]

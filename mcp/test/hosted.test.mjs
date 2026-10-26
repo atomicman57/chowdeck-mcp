@@ -58,5 +58,8 @@ test('browser sign-in is owner/CSRF protected and does not send an OTP on page l
  assert.equal((await account.fetch(request('/setup/send-otp',{...form({phone:'08012345678'}),headers:{...form({}).headers,origin:url}}))).status,401);
  const unlock=await account.fetch(request('/setup/unlock',{...form({key,csrf}),headers:{...form({}).headers,origin:url,cookie}}));assert.equal(unlock.status,303);
  const admin=unlock.headers.get('set-cookie').split(';')[0];
- const page=await account.fetch(request('/setup',{headers:{cookie:admin}}));assert.equal(page.status,200);assert.match(await page.text(),/Send my sign-in code/);
+ const page=await account.fetch(request('/setup',{headers:{cookie:admin}}));assert.equal(page.status,200);assert.match(await page.text(),/I requested a code on Chowdeck/);
+ const external=await account.fetch(request('/setup/use-code',{...form({phone:'08012345678'}),headers:{...form({}).headers,origin:url,cookie:admin}}));assert.equal(external.status,303);
+ const codePage=await account.fetch(request('/setup',{headers:{cookie:admin}}));assert.match(await codePage.text(),/One-time code/);
+ assert.equal((await account.fetch(request('/setup/use-code',form({phone:'08012345678'})))).status,403);
 });

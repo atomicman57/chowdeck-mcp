@@ -71,7 +71,7 @@ Choose your own Worker name in `mcp/wrangler.jsonc`. Generate a random owner key
 The Worker exposes:
 
 - `/mcp`: authenticated Streamable HTTP MCP.
-- `/setup`: owner-protected phone/OTP sign-in form; enter codes directly here rather than in chat.
+- `/setup`: owner-protected phone/OTP sign-in form. Request a code on Chowdeck’s official sign-in page after its Turnstile verification; then choose “I requested a code on Chowdeck” and enter that code directly on `/setup`. This establishes the MCP’s own session without copying browser credentials. An OTP request without browser verification can be rejected by Chowdeck.
 - OAuth discovery, dynamic registration, PKCE S256 and explicit owner consent with `chowdeck.read` / `chowdeck.write` scopes. One-hour access tokens and rotating refresh tokens valid until revoked.
 - `/health`: public, credential-free service status.
 - `/oauth-status`: owner-key-protected, sanitized last OAuth event, with no codes or tokens.
@@ -91,6 +91,6 @@ npm test
 npm audit
 ```
 
-The 27 tests build both runtimes and cover synthetic gift/wallet checkout, exact fees and shortfalls, price/vendor blocking, durable duplicate protection, login renewal, OAuth/PKCE, encrypted state restoration, owner/CSRF protection and image handling. They do not make paid orders. Existing account login, live charges, gifts and deliveries require separate authorized verification.
+The 30 tests build both runtimes and cover synthetic gift/wallet checkout, exact fees and shortfalls, price/vendor blocking, durable duplicate protection, login renewal, OAuth/PKCE, encrypted state restoration, owner/CSRF protection and image handling. They do not make paid orders. Existing account login, live charges, gifts and deliveries require separate authorized verification.
 
 See [SECURITY.md](SECURITY.md) for deployment boundaries. The npm package is marked private in this fork to avoid accidentally publishing under the original author's package name; build from source or deploy your own Worker.

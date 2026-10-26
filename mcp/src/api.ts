@@ -321,14 +321,24 @@ export async function validatePhone(phone: string, country_code = "NG") {
 }
 
 export async function sendLoginOtp(phone: string, country_code = "NG") {
-  return (await client().post("/auth/login", { phone: normalizePhone(phone), country_code, role: "customer" })).data;
+  try {
+    return (await client().post("/auth/login", { phone: normalizePhone(phone), country_code, role: "customer" })).data;
+  } catch (error: any) {
+    if (/security check failed/i.test(String(error?.response?.data?.message ?? ""))) {
+      error.response.data = { status: "browser_verification_required", otp_sent: false,
+        message: "Complete verification and request a code on Chowdeck’s official sign-in page, then enter the code on your hosted MCP /setup page. Do not copy browser tokens.",
+        login_url: "https://chowdeck.com/store/sign-in" };
+    }
+    throw error;
+  }
 }
 
 export async function verifyOtp(phone: string, otp: string, country_code = "NG") {
   const res = (await client().post("/auth/login/validate-otp", {
     otp, phone: normalizePhone(phone), country_code, role: "customer",
   })).data;
-  const token = res?.data?.token ?? res?.data?.access_token;
+  const token = res?.data?.token ?? res?.data?.access_token ?? res?.token ?? res?.access_token;
+  if (typeof token !== "string" || !token.trim()) throw new Error("Chowdeck did not establish a login; no authenticated session was saved.");
   if (token) {
     session.token = token;
     // upgrade guest cart if we had one
@@ -336,7 +346,7 @@ export async function verifyOtp(phone: string, otp: string, country_code = "NG")
       await client().patch("/customer/cart/guest/upgrade").catch(() => null);
     }
   }
-  return { ...res, data: { ...res?.data, token: undefined, access_token: undefined } };
+  return { status: "success", authenticated: true };
 }
 
 export async function getMe() {

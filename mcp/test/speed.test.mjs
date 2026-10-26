@@ -12,7 +12,7 @@ const server=http.createServer(async(req,res)=>{
  if(req.url.startsWith('/customer/vendor/98/menu/'))return;
  if(req.url.startsWith('/customer/vendor/98/menu?')){await new Promise(r=>setTimeout(r,100));return res.end(JSON.stringify({data:[{...item(),menu_group_ids:'8'}]}));}
  if(/\/menu\?/.test(req.url)){inflight++;peak=Math.max(peak,inflight);if(latency)await new Promise(r=>setTimeout(r,latency));inflight--;}
- if(/\/menu\?/.test(req.url))data=[item(),{id:12,name:'Option-group pseudo row',group_id:8,price:0,in_stock:true},{id:15,name:'HIV option group',minimum_selection:1,items:[]},{id:13,name:'Chivita juice',price:100000,in_stock:true,images:[]}];
+ if(/\/menu\?/.test(req.url))data=[item(),{id:12,name:'Option-group pseudo row',group_id:8,price:0,in_stock:true},{id:15,name:'HIV option group',minimum_selection:1,items:[]},{id:16,name:'HIV group row',type:'group',price:100,in_stock:true},{id:13,name:'Chivita juice',price:100000,in_stock:true,images:[]}];
  else if(/\/menu\/11/.test(req.url))data=item();
  else if(req.url.startsWith('/customer/vendor/'))data={id:1,address_id:77,name:'Synthetic Pharmacy',is_open:open,minimum_order_amount:0};
  else if(req.url.startsWith('/auth/me'))data={id:1};

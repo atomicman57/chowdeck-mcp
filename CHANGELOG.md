@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — resumable search coverage
+
+- Share a configurable invocation request budget across vendor listing, menu/detail reads and authentication retries; return partial matches and a scoped continuation cursor before exhausting it.
+- Accept up to 200 vendors per call, explain skipped vendors, validate vendor types and map `shop` to Chowdeck's `supermarket` category.
+- Reuse menus across all query synonyms, batch cache reads, cache first result pages and reduce redundant option-detail requests.
+- Resolve retired root option-group references from authoritative item details while preserving failures as incomplete coverage.
+- Use D1 storage with indexed batch menu reads and batched menu/head writes with atomic cache limits, keeping both external and database invocation budgets below free-plan ceilings.
+- Match cable/cord/CHORD and USB-C/type-C wording, combine item/category tokens, and support focused known-vendor comparisons.
+- Add fourteen regression tests; all 55 tests pass without real orders, payments or OTPs.
+
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

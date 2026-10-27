@@ -9,6 +9,8 @@ import { Buffer } from "node:buffer";
 import { session, persistNow } from "./session.js";
 import { createHash } from "node:crypto";
 
+import { chargeSubrequest, currentBudget, SubrequestBudgetError } from "./budget.js";
+
 const BASE = process.env.CHOWDECK_API_BASE ?? "https://api.chowdeck.com";
 const APP_VERSION = process.env.CHOWDECK_APP_VERSION ?? "2.0.0";
 const TIMEOUT_MS = Number(process.env.CHOWDECK_TIMEOUT_MS ?? 15000);
@@ -29,16 +31,19 @@ export async function refreshSessionToken(): Promise<void> {
   if (!previous) throw new Error("Sign in to Chowdeck before refreshing the session.");
   refreshInFlight = (async () => {
     try {
+      chargeSubrequest("external");
       const response = await axios.post(`${BASE}/auth/refresh-token`, { token: previous }, {
         timeout: TIMEOUT_MS,
+        ...(currentBudget()?.search ? { fetchOptions: { redirect: "error" }, maxRedirects: 0 } : {}),
         headers: { "x-app-name": "storefront", "x-app-os": "web", "Authorization": `Bearer ${previous}` },
       });
       const token = response.data?.token ?? response.data?.data?.token;
       if (typeof token !== "string" || !token) throw new Error("Missing refreshed token");
       session.token = token;
       // Cache prewarming must never turn successful renewal into an auth failure.
-      try { sessionRefreshHook?.(); } catch { }
-    } catch {
+      try { if (!currentBudget()?.search) sessionRefreshHook?.(); } catch { }
+    } catch (error) {
+      if (error instanceof SubrequestBudgetError) throw error;
       throw new Error("Chowdeck could not renew this session. Sign in again if it has been revoked; no order was automatically repeated after an ambiguous failure.");
     }
   })().finally(() => { refreshInFlight = null; });
@@ -65,11 +70,18 @@ function client(): AxiosInstance {
   instance.interceptors.request.use(async (cfg) => {
     if (session.token && !cfg.url?.startsWith("/auth/login") && tokenNeedsRefresh(session.token)) await refreshSessionToken();
     if (session.token) cfg.headers.set("Authorization", `Bearer ${session.token}`);
+    chargeSubrequest("external");
+    if (currentBudget()?.search) {
+      (cfg as any)._noRetry = true;
+      cfg.fetchOptions = { ...cfg.fetchOptions, redirect: "error" };
+      cfg.maxRedirects = 0;
+    }
     return cfg;
   });
   // Retry only transient failures (network errors / 5xx) with linear backoff.
   // Never retries 4xx; order placement opts out via _noRetry to avoid dupes.
   instance.interceptors.response.use(undefined, async (error) => {
+    if (error instanceof SubrequestBudgetError) throw error;
     const cfg = error.config as (AxiosRequestConfig & { _retry?: number; _noRetry?: boolean; _authRetried?: boolean }) | undefined;
     const authMessage = error.response?.data?.message;
     if (cfg && session.token && !cfg._authRetried && error.response?.status === 401 && ["Token expired", "Invalid token"].includes(authMessage)) {

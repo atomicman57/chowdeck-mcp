@@ -4,7 +4,8 @@ import {ChowdeckAccount} from '../hosting/worker.bundle.mjs';
 const key='synthetic-owner-key-012345678901234567890';
 const make=()=>{
  const map=new Map();const storage={get:async k=>map.get(k),put:async(k,v)=>map.set(k,structuredClone(v)),delete:async k=>map.delete(k)};
- const env={OWNER_ACCESS_KEY:key,SESSION_ENCRYPTION_KEY:'12'.repeat(32)};
+ // These account/auth tests do not access the menu cache. D1 behavior has a separate SQLite-backed test suite.
+ const env={MCP_STORAGE:{},OWNER_ACCESS_KEY:key,SESSION_ENCRYPTION_KEY:'12'.repeat(32)};
  return {account:new ChowdeckAccount({storage},env),map,storage,env};
 };
 const url='https://chowdeck.example';

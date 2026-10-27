@@ -32,3 +32,6 @@ mcp/hosting/worker.bundle.mjs
 .wrangler/
 .dev.vars
 .dev.vars.*
+
+# Personal Cloudflare deployment identifiers
+wrangler.local.jsonc

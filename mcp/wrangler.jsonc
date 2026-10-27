@@ -1,5 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  "triggers": {"crons": ["*/5 * * * *"]},
   "name": "chowdeck-mcp",
   "main": "hosting/worker.bundle.mjs",
   "compatibility_date": "2026-10-26",
@@ -25,10 +26,15 @@
       ]
     }
   ],
-  "kv_namespaces": [
-    {
-      "binding": "CHOWDECK_CACHE",
-      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
-    }
-  ]
+  "d1_databases": [
+  {
+    "binding": "MCP_STORAGE",
+    "database_name": "chowdeck-mcp-storage",
+    "database_id": "00000000-0000-0000-0000-000000000000"
+  }
+],
+  "vars": {
+    "CHOWDECK_WORKERS_PLAN": "free",
+    "CHOWDECK_SUBREQUEST_LIMIT": "50"
+  }
 }

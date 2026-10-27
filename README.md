@@ -63,8 +63,9 @@ The Cloudflare Worker is **single-account**: every authorized client shares one 
 cd mcp
 npm ci --ignore-scripts
 npm test
-npx wrangler kv namespace create CHOWDECK_CACHE
-# Put the returned namespace ID in wrangler.jsonc before deployment.
+npx wrangler d1 create chowdeck-mcp-storage
+# Put the returned D1 database ID in wrangler.jsonc before initializing it.
+npx wrangler d1 execute MCP_STORAGE --remote --file hosting/d1-schema.sql
 npx wrangler deploy
 npx wrangler secret put OWNER_ACCESS_KEY
 npx wrangler secret put SESSION_ENCRYPTION_KEY
@@ -97,6 +98,6 @@ npm test
 npm audit
 ```
 
-The 41 tests build both runtimes and cover synthetic gift/wallet checkout, exact fees and shortfalls, price/vendor blocking, durable duplicate protection, login renewal, OAuth/PKCE, encrypted state restoration, owner/CSRF protection image handling, parallel search/cache behavior, bounded timeouts, slim menus, URL batches and fast dry-run/idempotency safeguards. They do not make paid orders. Existing account login, live charges, gifts and deliveries require separate authorized verification.
+The 55 tests build both runtimes and cover synthetic gift/wallet checkout, exact fees and shortfalls, price/vendor blocking, durable duplicate protection, login renewal, OAuth/PKCE, encrypted state restoration, owner/CSRF protection image handling, parallel search/cache behavior, bounded timeouts, request-budget cursor continuation, vendor-type validation, retired option groups, actual SQLite/D1 query budgets, compressed cache size/daily limits, cable synonyms, focused vendor scopes, slim menus, URL batches and fast dry-run/idempotency safeguards. They do not make paid orders. Existing account login, live charges, gifts and deliveries require separate authorized verification.
 
 See [SECURITY.md](SECURITY.md) for deployment boundaries. The npm package is marked private in this fork to avoid accidentally publishing under the original author's package name; build from source or deploy your own Worker.

@@ -1,3 +1,5 @@
+import {withD1Storage, cleanupD1Storage} from './d1-kv.mjs';
+import {withRequestBudget} from '../src/budget.ts';
 import { createServer } from '../src/server.ts';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import * as api from "../src/api.ts";
@@ -19,8 +21,8 @@ const READ_SCOPE='chowdeck.read',WRITE_SCOPE='chowdeck.write';
 const readTool=name=>/^(get_|list_|search|place_details$|reverse_geocode$|ip_location$|track_order$|prepare_checkout$|session_status$|find_item$|find_vendor_alternatives$|order_log$|check_order_refund$|wallet_shortfall$)/.test(name);
 
 export class ChowdeckAccount {
- constructor(ctx,env){this.ctx=ctx;this.env=env;this.queue=Promise.resolve();}
- fetch(request){const task=this.queue.then(()=>this.handle(request));this.queue=task.catch(()=>{});return task.catch(()=>json({error:'Request failed; no details logged.'},500));}
+ constructor(ctx,env){this.ctx=ctx;this.env=withD1Storage(env,'CHOWDECK_CACHE');this.queue=Promise.resolve();}
+ fetch(request){const task=this.queue.then(()=>withRequestBudget({storage:'d1',plan:this.env.CHOWDECK_WORKERS_PLAN,limit:this.env.CHOWDECK_SUBREQUEST_LIMIT},()=>this.handle(request)));this.queue=task.catch(()=>{});return task.catch(()=>json({error:'Request failed; no details logged.'},500));}
  async handle(request){
   const url=new URL(request.url),base=url.origin,store=this.ctx.storage;
   fast.configureFastCache(this.env.CHOWDECK_CACHE,p=>this.ctx.waitUntil?.(p));
@@ -171,4 +173,4 @@ export class ChowdeckAccount {
   }finally{await transport.close();await server.close();}
  }
 }
-export default {fetch(request,env){return env.CHOWDECK_ACCOUNT.getByName('owner').fetch(request);}};
+export default {scheduled(event,env,ctx){ctx.waitUntil(cleanupD1Storage(env));},fetch(request,env){return env.CHOWDECK_ACCOUNT.getByName('owner').fetch(request);}};

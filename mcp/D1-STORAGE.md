@@ -7,3 +7,7 @@ Initialize new deployments with hosting/d1-schema.sql. Cache entries are gzip-co
 Values larger than 1.4 MB raw or 256 KiB compressed/base64 are not cached (continuations allow 512 KiB compressed/base64). Cache writes are optional for menu responses. An unusually broad search may require a fresh search after its continuation budget is exhausted. Daily reset is 01:00 Lagos time.
 
 The old kv_entries table is legacy cache only and can be emptied after deployment; never delete or reset the CHOWDECK_ACCOUNT Durable Object. No KV binding or paid-plan upgrade is required.
+
+## In-memory cache
+
+Every insertion path (ordinary reads/writes, bulk D1 hydration, negative lookups and continuations) uses `src/bounded-memory.ts`. The shared LRU has a 12 MiB retained-size accounting budget, a 240-entry cap, and a 3 MiB per-entry accounting cap. Expired/oversize values are not retained. Accounting uses four times serialized UTF-8 bytes plus key/entry overhead to allow for JS object/string costs; this is a conservative cache budget rather than an exact V8 heap measurement. Active response parsing and other runtime memory still count separately toward Cloudflare's isolate limit.

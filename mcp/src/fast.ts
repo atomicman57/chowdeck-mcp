@@ -1,3 +1,4 @@
+import {BoundedMemoryCache} from './bounded-memory.js';
 import * as api from './api.js';
 import { session } from './session.js';
 import { imageUrl } from './media.js';
@@ -12,7 +13,7 @@ type KV = {
     }): Promise<void>;
     delete(k: string): Promise<void>;
 };
-const memory = new Map<string, any>(), pending = new Map<string, Promise<any>>();
+const memory = new BoundedMemoryCache(), pending = new Map<string, Promise<any>>();
 let kv: KV | undefined, background: ((p: Promise<any>) => void) | undefined;
 export function configureFastCache(store?: KV, waitUntil?: (p: Promise<any>) => void) { kv = store; background = waitUntil; }
 export function resetFastCache() { memory.clear(); pending.clear(); }
@@ -27,8 +28,7 @@ async function read(key: string) { let e = memory.get(key); if (e && e.expires >
         }
     }
     catch (error) { if (error instanceof SubrequestBudgetError) throw error; } return null; }
-async function write(key: string, value: any, ttl: number, extra: any = {}, persist = true) { const e = { value, expires: Date.now() + ttl * 1000, ...extra }; memory.set(key, e); if (memory.size > 240)
-    memory.delete(memory.keys().next().value!); if (persist && kv && (!currentBudget() || currentBudget()!.internal < currentBudget()!.internalLimit - 4)) {
+async function write(key: string, value: any, ttl: number, extra: any = {}, persist = true) { const e = { value, expires: Date.now() + ttl * 1000, ...extra }; memory.set(key, e); if (persist && kv && (!currentBudget() || currentBudget()!.internal < currentBudget()!.internalLimit - 4)) {
     chargeSubrequest('internal');
     await kv.put(key, JSON.stringify(e), { expirationTtl: ttl }).catch(() => { }); } return e; }
 // Bulk-load a bounded batch before menu matching: two KV round trips instead of
